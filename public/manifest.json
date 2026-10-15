@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "TBD — Stellar Wallet",
+  "version": "1.0.0",
+  "description": "A non-custodial browser-extension wallet for the Stellar network with plain-language previews and smart routing.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TBD Wallet"
+  },
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://horizon.stellar.org/*",
+    "https://horizon-testnet.stellar.org/*",
+    "https://friendbot.stellar.org/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
