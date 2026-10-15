@@ -102,7 +102,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         height: '100%',
         background: 'var(--bg-app)',
         color: 'var(--text-primary)',
-        overflowY: 'auto',
+        overflow: 'hidden',
       }}
     >
       {/* Toast Alert */}
@@ -131,36 +131,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         </div>
       )}
 
-      {/* Screen Header */}
+      {/* Screen Header - Compact */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          padding: '16px',
+          gap: '8px',
+          padding: '8px 12px',
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
+          flexShrink: 0,
         }}
       >
         <button
           className="btn btn-ghost btn-icon"
           onClick={onBack}
           aria-label={t.back}
-          style={{ padding: '6px' }}
+          style={{ padding: '4px' }}
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </button>
-        <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, flex: 1 }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 600, margin: 0, flex: 1 }}>
           {t.settingsTitle}
         </h2>
         <span
           style={{
             fontSize: '10px',
-            padding: '2px 8px',
-            borderRadius: '12px',
+            padding: '2px 6px',
+            borderRadius: '10px',
             border: '1px solid var(--border-subtle)',
             background: 'var(--bg-app)',
             color: 'var(--text-secondary)',
@@ -171,7 +169,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         </span>
       </div>
 
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Network Selection */}
         <div className="card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>

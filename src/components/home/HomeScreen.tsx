@@ -105,16 +105,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Account & Network Selector Bar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 16px',
+          padding: '8px 12px',
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
+          flexShrink: 0,
         }}
       >
         {/* Account Selector Pill */}
@@ -146,7 +147,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </button>
       </div>
 
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Shortened Address Bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
@@ -345,38 +346,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </div>
 
-      {/* Bottom Navigation Tabs */}
+      {/* Bottom Navigation Tabs - Pinned to bottom */}
       <div
         style={{
-          marginTop: 'auto',
+          flexShrink: 0,
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
           borderTop: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
-          padding: '8px 0',
+          padding: '4px 0',
         }}
       >
         <button
           className="btn btn-ghost"
-          style={{ flexDirection: 'column', gap: '3px', fontSize: '10px', color: 'var(--accent)', fontWeight: 600 }}
+          style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--accent)', fontWeight: 600, padding: '4px 0' }}
         >
-          <Home size={16} />
+          <Home size={15} />
           <span>Home</span>
         </button>
         <button
           className="btn btn-ghost"
           onClick={onOpenActivity}
-          style={{ flexDirection: 'column', gap: '3px', fontSize: '10px', color: 'var(--text-secondary)' }}
+          style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--text-secondary)', padding: '4px 0' }}
         >
-          <Clock size={16} />
+          <Clock size={15} />
           <span>Activity</span>
         </button>
         <button
           className="btn btn-ghost"
           onClick={onOpenSettings}
-          style={{ flexDirection: 'column', gap: '3px', fontSize: '10px', color: 'var(--text-secondary)' }}
+          style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--text-secondary)', padding: '4px 0' }}
         >
-          <SettingsIcon size={16} />
+          <SettingsIcon size={15} />
           <span>Settings</span>
         </button>
       </div>

@@ -113,71 +113,73 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
             </div>
           )}
 
-          {/* Screen Routing */}
-          {!isInitialized ? (
-            <>
-              {onboardingView === 'welcome' && (
-                <WelcomeScreen
-                  onCreate={() => setOnboardingView('create')}
-                  onImport={() => setOnboardingView('import')}
-                />
-              )}
-              {onboardingView === 'create' && (
-                <CreateWalletScreen
-                  onBack={() => setOnboardingView('welcome')}
-                  onComplete={createWallet}
-                />
-              )}
-              {onboardingView === 'import' && (
-                <ImportWalletScreen
-                  onBack={() => setOnboardingView('welcome')}
-                  onImportMnemonic={importWallet}
-                  onImportSecretKey={importSecretKey}
-                />
-              )}
-            </>
-          ) : isLocked ? (
-            <UnlockScreen onUnlock={unlock} onReset={resetWallet} />
-          ) : activeView === 'send' ? (
-            <SendScreen
-              onBack={() => setActiveView('home')}
-              onSuccess={() => setActiveView('home')}
-            />
-          ) : activeView === 'receive' ? (
-            <ReceiveScreen onBack={() => setActiveView('home')} />
-          ) : activeView === 'addAsset' ? (
-            <ManageAssetsScreen onBack={() => setActiveView('home')} />
-          ) : activeView === 'swap' ? (
-            <SwapScreen
-              onBack={() => setActiveView('home')}
-              onSuccess={() => setActiveView('home')}
-            />
-          ) : activeView === 'history' ? (
-            <HistoryScreen onBack={() => setActiveView('home')} />
-          ) : activeView === 'assetDetail' ? (
-            <AssetDetailScreen
-              assetCode={selectedAssetCode}
-              onBack={() => setActiveView('home')}
-              onSendAsset={(_code) => setActiveView('send')}
-              onSwapAsset={(_code) => setActiveView('swap')}
-            />
-          ) : activeView === 'settings' ? (
-            <SettingsScreen onBack={() => setActiveView('home')} />
-          ) : (
-            <HomeScreen
-              onSend={() => setActiveView('send')}
-              onReceive={() => setActiveView('receive')}
-              onSwap={() => setActiveView('swap')}
-              onAddAsset={() => setActiveView('addAsset')}
-              onSelectAsset={(code) => {
-                setSelectedAssetCode(code);
-                setActiveView('assetDetail');
-              }}
-              onOpenAccountSelector={() => setIsAccountModalOpen(true)}
-              onOpenActivity={() => setActiveView('history')}
-              onOpenSettings={() => setActiveView('settings')}
-            />
-          )}
+          {/* Screen Routing Content Area */}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {!isInitialized ? (
+              <>
+                {onboardingView === 'welcome' && (
+                  <WelcomeScreen
+                    onCreate={() => setOnboardingView('create')}
+                    onImport={() => setOnboardingView('import')}
+                  />
+                )}
+                {onboardingView === 'create' && (
+                  <CreateWalletScreen
+                    onBack={() => setOnboardingView('welcome')}
+                    onComplete={createWallet}
+                  />
+                )}
+                {onboardingView === 'import' && (
+                  <ImportWalletScreen
+                    onBack={() => setOnboardingView('welcome')}
+                    onImportMnemonic={importWallet}
+                    onImportSecretKey={importSecretKey}
+                  />
+                )}
+              </>
+            ) : isLocked ? (
+              <UnlockScreen onUnlock={unlock} onReset={resetWallet} />
+            ) : activeView === 'send' ? (
+              <SendScreen
+                onBack={() => setActiveView('home')}
+                onSuccess={() => setActiveView('home')}
+              />
+            ) : activeView === 'receive' ? (
+              <ReceiveScreen onBack={() => setActiveView('home')} />
+            ) : activeView === 'addAsset' ? (
+              <ManageAssetsScreen onBack={() => setActiveView('home')} />
+            ) : activeView === 'swap' ? (
+              <SwapScreen
+                onBack={() => setActiveView('home')}
+                onSuccess={() => setActiveView('home')}
+              />
+            ) : activeView === 'history' ? (
+              <HistoryScreen onBack={() => setActiveView('home')} />
+            ) : activeView === 'assetDetail' ? (
+              <AssetDetailScreen
+                assetCode={selectedAssetCode}
+                onBack={() => setActiveView('home')}
+                onSendAsset={(_code) => setActiveView('send')}
+                onSwapAsset={(_code) => setActiveView('swap')}
+              />
+            ) : activeView === 'settings' ? (
+              <SettingsScreen onBack={() => setActiveView('home')} />
+            ) : (
+              <HomeScreen
+                onSend={() => setActiveView('send')}
+                onReceive={() => setActiveView('receive')}
+                onSwap={() => setActiveView('swap')}
+                onAddAsset={() => setActiveView('addAsset')}
+                onSelectAsset={(code) => {
+                  setSelectedAssetCode(code);
+                  setActiveView('assetDetail');
+                }}
+                onOpenAccountSelector={() => setIsAccountModalOpen(true)}
+                onOpenActivity={() => setActiveView('history')}
+                onOpenSettings={() => setActiveView('settings')}
+              />
+            )}
+          </div>
 
           <AccountSelectorModal
             isOpen={isAccountModalOpen}

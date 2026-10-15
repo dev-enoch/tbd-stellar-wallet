@@ -53,19 +53,30 @@ export const AssetDetailScreen: React.FC<AssetDetailScreenProps> = ({
   const isPositive = market.change24h >= 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', justifyContent: 'space-between' }}>
-      <div>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <button className="btn btn-ghost btn-icon" onClick={onBack}>
-            <ArrowLeft size={16} />
-          </button>
-          <span className="text-xs text-muted" style={{ fontWeight: 600 }}>Asset Details</span>
-          <div style={{ width: '28px' }} />
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Header - Compact */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+          flexShrink: 0,
+        }}
+      >
+        <button className="btn btn-ghost btn-icon" onClick={onBack} style={{ padding: '4px' }}>
+          <ArrowLeft size={16} />
+        </button>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>Asset Details</span>
+        <div style={{ width: '28px' }} />
+      </div>
 
-        {/* Top Asset Title & Price */}
-        <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div>
+          {/* Top Asset Title & Price */}
+          <div style={{ textAlign: 'center', marginBottom: '18px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             <h2 className="text-xl" style={{ fontWeight: 700 }}>{assetCode}</h2>
             {assetCode !== 'XLM' && (
@@ -147,7 +158,7 @@ export const AssetDetailScreen: React.FC<AssetDetailScreenProps> = ({
         </div>
       </div>
 
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', marginTop: '16px' }}>
         <a
           href={getExplorerUrl('account', activeAccount?.publicKey || '', preferences.network)}
           target="_blank"
@@ -160,5 +171,6 @@ export const AssetDetailScreen: React.FC<AssetDetailScreenProps> = ({
         </a>
       </div>
     </div>
-  );
+  </div>
+);
 };
