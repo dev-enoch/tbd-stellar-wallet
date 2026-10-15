@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateMemo, checkMemoRequirement } from '../services/transactions';
+import { validateMemo, checkMemoRequirement, verifyDestinationAddress } from '../services/transactions';
 
 describe('Transaction & Payment Service', () => {
   it('validates memo values accurately', () => {
@@ -26,5 +26,13 @@ describe('Transaction & Payment Service', () => {
 
     const regularAddress = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7';
     expect(checkMemoRequirement(regularAddress)).toBe(false);
+  });
+
+  it('verifies destination address and detects exchange requirements', async () => {
+    const exchangeAddress = 'GABT54O3L4B52L6U3Y5XZZ7K7U7N7J2G2H3K4L5M6N7P8Q9R0S1T2U3V';
+    const res = await verifyDestinationAddress(exchangeAddress, 'testnet');
+    expect(res.valid).toBe(true);
+    expect(res.isExchange).toBe(true);
+    expect(res.message).toContain('Exchange');
   });
 });
