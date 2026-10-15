@@ -7,6 +7,8 @@ export interface WalletPreferences {
   network: 'testnet' | 'mainnet';
   currency: 'USD' | 'EUR' | 'NGN' | 'GBP';
   autoLockMinutes: number; // 0 = never, 5, 15, 30, 60
+  threatScanningEnabled: boolean;
+  allowBlindSigning: boolean;
   connectedSites: {
     origin: string;
     connectedAt: number;
@@ -23,6 +25,8 @@ const defaultPreferences: WalletPreferences = {
   network: 'testnet', // Default to testnet for safe exploration as per PRD
   currency: 'USD',
   autoLockMinutes: 15,
+  threatScanningEnabled: true,
+  allowBlindSigning: false,
   connectedSites: [],
 };
 

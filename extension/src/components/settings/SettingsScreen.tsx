@@ -21,6 +21,8 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  ShieldAlert,
+  FileCode,
 } from 'lucide-react';
 
 interface SettingsScreenProps {
@@ -755,7 +757,68 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               <ChevronRight size={14} color="var(--text-muted)" />
             </div>
           </div>
+
+          {/* Malicious Transaction Threat Scanning Switch (PRD Section 4) */}
+          <div
+            className="apple-row"
+            onClick={() => {
+              const nextVal = !preferences.threatScanningEnabled;
+              updatePreferences({ threatScanningEnabled: nextVal });
+              showToast(nextVal ? 'Threat shield activated' : 'Threat shield disabled');
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="apple-icon-chip"><ShieldAlert size={14} /></span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span className="apple-row-title">Threat Shield</span>
+                <span className="apple-row-subtitle">Screen transactions for malicious contracts</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                className="apple-row-value"
+                style={{
+                  fontWeight: 600,
+                  color: preferences.threatScanningEnabled ? 'var(--success)' : 'var(--text-muted)',
+                }}
+              >
+                {preferences.threatScanningEnabled ? 'Active' : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          {/* Contract Blind Signing Toggle (PRD Section 5.5) */}
+          <div
+            className="apple-row"
+            onClick={() => {
+              const nextVal = !preferences.allowBlindSigning;
+              updatePreferences({ allowBlindSigning: nextVal });
+              showToast(nextVal ? 'Blind signing allowed (Caution)' : 'Blind signing restricted');
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="apple-icon-chip"><FileCode size={14} /></span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span className="apple-row-title">Contract Blind Signing</span>
+                <span className="apple-row-subtitle">Allow unverified hardware contract calls</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                className="apple-row-value"
+                style={{
+                  fontWeight: 600,
+                  color: preferences.allowBlindSigning ? '#eab308' : 'var(--text-muted)',
+                }}
+              >
+                {preferences.allowBlindSigning ? 'Allowed' : 'Off'}
+              </span>
+            </div>
+          </div>
         </div>
+        <p className="apple-section-footer">
+          Threat shield analyzes transaction parameters against decentralized threat lists. Your secret recovery phrase and private keys never leave this device.
+        </p>
       </div>
 
       {/* Group: SYSTEM & ABOUT */}

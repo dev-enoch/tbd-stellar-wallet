@@ -17,6 +17,8 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
+import { scanTransaction, ScanResult } from '../../services/scanning';
+import { VerdictStrip } from '../security/VerdictStrip';
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -41,7 +43,38 @@ export const SwapScreen: React.FC<SwapScreenProps> = ({ onBack, onSuccess }) => 
   const [error, setError] = useState('');
   const [txHash, setTxHash] = useState('');
 
+  // Threat Scanning States (PRD Section 4)
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [isScanningThreats, setIsScanningThreats] = useState(false);
+  const [threatOverridden, setThreatOverridden] = useState(false);
+
   const countdownIntervalRef = useRef<any>(null);
+
+  // Scan swap quote for price impact and token issuer authenticity
+  useEffect(() => {
+    if (quote && activeAccount) {
+      let isCancelled = false;
+      setIsScanningThreats(true);
+      setThreatOverridden(false);
+      scanTransaction({
+        assetCode: toCode,
+        assetIssuer: quote.toAssetIssuer,
+        amount: quote.sendAmount,
+        priceImpact: quote.priceImpact,
+        enabled: preferences.threatScanningEnabled,
+      }).then((res) => {
+        if (!isCancelled) {
+          setScanResult(res);
+          setIsScanningThreats(false);
+        }
+      });
+      return () => {
+        isCancelled = true;
+      };
+    } else {
+      setScanResult(null);
+    }
+  }, [quote, toCode, preferences.threatScanningEnabled, activeAccount]);
 
   // Available token choices
   const availableTokens = [
@@ -379,12 +412,34 @@ export const SwapScreen: React.FC<SwapScreenProps> = ({ onBack, onSuccess }) => 
             </div>
 
             {error && <div className="input-error-msg" style={{ marginTop: '12px' }}>{error}</div>}
+
+            {/* Security Verdict Strip (PRD Section 4) */}
+            {quote && (
+              <div style={{ marginTop: '12px' }}>
+                <VerdictStrip
+                  scanResult={scanResult}
+                  isLoading={isScanningThreats}
+                  onOverrideChange={setThreatOverridden}
+                  isOverridden={threatOverridden}
+                />
+              </div>
+            )}
           </div>
 
           <button
-            className="btn btn-primary btn-lg"
+            className={`btn ${scanResult?.verdict === 'blocked' ? 'btn-danger' : 'btn-primary'} btn-lg`}
             onClick={handleExecuteSwap}
-            disabled={isSwapping || !quote || parseFloat(fromAmount) <= 0 || parseFloat(fromAmount) > parseFloat(selectedFromBalance)}
+            disabled={
+              isSwapping ||
+              !quote ||
+              parseFloat(fromAmount) <= 0 ||
+              parseFloat(fromAmount) > parseFloat(selectedFromBalance) ||
+              isScanningThreats ||
+              ((scanResult?.verdict === 'blocked' ||
+                scanResult?.verdict === 'warning' ||
+                scanResult?.verdict === 'unavailable') &&
+                !threatOverridden)
+            }
             style={{ marginTop: '16px' }}
           >
             {isSwapping ? (
