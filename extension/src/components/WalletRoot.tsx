@@ -14,6 +14,7 @@ import { AssetDetailScreen } from './portfolio/AssetDetailScreen';
 import { SettingsScreen } from './settings/SettingsScreen';
 import { DAppSandbox } from './dapp/DAppSandbox';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
+import { DashboardView } from './dashboard/DashboardView';
 
 interface WalletRootProps {
   isPopup?: boolean;
@@ -27,7 +28,8 @@ export type WalletView =
   | 'addAsset'
   | 'history'
   | 'assetDetail'
-  | 'settings';
+  | 'settings'
+  | 'dashboard';
 
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
   const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, resetWallet } = useWallet();
@@ -95,6 +97,8 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
               />
             ) : activeView === 'settings' ? (
               <SettingsScreen onBack={() => setActiveView('home')} />
+            ) : activeView === 'dashboard' ? (
+              <DashboardView onBack={() => setActiveView('home')} isFullTab={!isPopup} />
             ) : (
               <HomeScreen
                 onSend={() => setActiveView('send')}
@@ -108,6 +112,7 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
                 onOpenAccountSelector={() => setIsAccountModalOpen(true)}
                 onOpenActivity={() => setActiveView('history')}
                 onOpenSettings={() => setActiveView('settings')}
+                onOpenDashboard={() => setActiveView('dashboard')}
               />
             )}
           </div>
