@@ -13,9 +13,10 @@ import { ManageAssetsScreen } from './assets/ManageAssetsScreen';
 import { SwapScreen } from './swap/SwapScreen';
 import { HistoryScreen } from './history/HistoryScreen';
 import { AssetDetailScreen } from './portfolio/AssetDetailScreen';
+import { SettingsScreen } from './settings/SettingsScreen';
 import { DAppSandbox } from './dapp/DAppSandbox';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
-import { Sun, Moon, Globe, Lock } from 'lucide-react';
+import { Sun, Moon, Globe, Lock, Settings as SettingsIcon } from 'lucide-react';
 
 interface WalletRootProps {
   isPopup?: boolean;
@@ -95,9 +96,18 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
                   {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                 </button>
                 {!isLocked && isInitialized && (
-                  <button className="btn btn-ghost btn-icon" onClick={lock} title={t.lockWallet}>
-                    <Lock size={14} />
-                  </button>
+                  <>
+                    <button
+                      className="btn btn-ghost btn-icon"
+                      onClick={() => setActiveView('settings')}
+                      title={t.settingsTitle}
+                    >
+                      <SettingsIcon size={14} />
+                    </button>
+                    <button className="btn btn-ghost btn-icon" onClick={lock} title={t.lockWallet}>
+                      <Lock size={14} />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -151,6 +161,8 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
               onSendAsset={(_code) => setActiveView('send')}
               onSwapAsset={(_code) => setActiveView('swap')}
             />
+          ) : activeView === 'settings' ? (
+            <SettingsScreen onBack={() => setActiveView('home')} />
           ) : (
             <HomeScreen
               onSend={() => setActiveView('send')}
