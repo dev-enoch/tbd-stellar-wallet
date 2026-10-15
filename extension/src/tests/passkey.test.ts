@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   derivePasskeyContractAddress,
   createPasskeyAccount,
+  addRecoveryPasskey,
   checkFeeSponsorship,
   sponsorTransaction,
   getStoredPasskeys,
@@ -38,12 +39,14 @@ describe('Passkey Smart Account & Sponsored Fees Service (PRD Section 8)', () =>
     });
   });
 
-  describe('Passkey Account Creation', () => {
-    it('creates a passkey credential and initializes PasskeySigner', async () => {
+  describe('Passkey Account Creation & Smart Account Deployment', () => {
+    it('creates a passkey credential, sets deployment/rent flags, and initializes PasskeySigner', async () => {
       const res = await createPasskeyAccount('Personal Passkey');
 
       expect(res.credential.nickname).toBe('Personal Passkey');
       expect(res.credential.contractAddress).toMatch(/^C[A-Z0-9]{55}$/);
+      expect(res.credential.isDeployed).toBe(true);
+      expect(res.credential.rentFunded).toBe(true);
       expect(res.signer).toBeInstanceOf(PasskeySigner);
       expect(res.signer.type).toBe('passkey');
       expect(res.signer.capabilities.isContractAccount).toBe(true);
@@ -52,6 +55,17 @@ describe('Passkey Smart Account & Sponsored Fees Service (PRD Section 8)', () =>
       const stored = getStoredPasskeys();
       expect(stored.length).toBe(1);
       expect(stored[0].contractAddress).toBe(res.credential.contractAddress);
+    });
+
+    it('supports adding a second backup passkey for multi-device recovery (PRD Section 8)', async () => {
+      const res = await createPasskeyAccount('Main Device');
+      const backupCredId = await addRecoveryPasskey(res.credential.contractAddress, 'Backup Laptop');
+
+      expect(backupCredId).toMatch(/^recovery_/);
+
+      const stored = getStoredPasskeys();
+      const account = stored.find((p) => p.contractAddress === res.credential.contractAddress);
+      expect(account?.recoveryCredentialIds).toContain(backupCredId);
     });
   });
 

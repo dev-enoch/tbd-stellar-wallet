@@ -13,8 +13,8 @@ import {
   ArrowRight,
   ShieldAlert,
   Clock,
-  Copy,
-  Check,
+  ExternalLink,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface RampScreenProps {
@@ -22,7 +22,7 @@ interface RampScreenProps {
   onSuccess: () => void;
 }
 
-type Step = 'input' | 'compare' | 'instructions' | 'status';
+type Step = 'input' | 'instructions' | 'status';
 
 export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => {
   const { activeAccount } = useWallet();
@@ -32,7 +32,6 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
   const [selectedQuote, setSelectedQuote] = useState<RampQuote | null>(null);
   const [activeTx, setActiveTx] = useState<RampTransaction | null>(null);
   const [step, setStep] = useState<Step>('input');
-  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const numAmount = parseFloat(amountNgn) || 0;
   const quotes = getRampQuotes(rampType, numAmount);
@@ -42,7 +41,7 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
     setStep('instructions');
   };
 
-  const handleStartInteractive = () => {
+  const handleLaunchInteractiveFlow = () => {
     if (!selectedQuote || !activeAccount) return;
 
     const tx = initiateRampTransaction({
@@ -51,13 +50,13 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
     });
 
     setActiveTx(tx);
-    setStep('status');
-  };
 
-  const copyToClipboard = (text: string, fieldName: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    setTimeout(() => setCopiedField(null), 2000);
+    // Launch anchor's authentic hosted interactive page in a secure new tab
+    if (typeof window !== 'undefined' && window.open) {
+      window.open(tx.interactiveUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    setStep('status');
   };
 
   return (
@@ -93,6 +92,24 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
         {/* Step 1: Input & Comparison */}
         {step === 'input' && (
           <>
+            {/* Regulatory Pilot Warning Banner */}
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-subtle)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+              }}
+            >
+              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '11px', lineHeight: 1.4 }}>
+                <strong>Pilot & Regulatory Sandbox:</strong> Under draft Nigerian SEC digital asset rules and PRD go/no-go gates, live fiat trading requires a formal legal opinion and signed partner agreement. Currently operating in Sandbox mode.
+              </div>
+            </div>
+
             {/* Buy vs Sell Toggle */}
             <div style={{ display: 'flex', background: 'var(--bg-surface)', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
               <button
@@ -148,19 +165,19 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
             {/* Partner Quotes Comparison */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600 }}>Compare Licensed Partners</span>
+                <span style={{ fontSize: '12px', fontWeight: 600 }}>Anchor Partners & Sandboxes</span>
                 <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>SEP-24 Compliant</span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {quotes.map((q, idx) => (
+                {quotes.map((q) => (
                   <div
                     key={q.partnerId}
                     style={{
                       padding: '12px',
                       borderRadius: 'var(--radius-md)',
                       background: 'var(--bg-surface)',
-                      border: idx === 0 ? '1px solid var(--text-primary)' : '1px solid var(--border-subtle)',
+                      border: q.isPilotApproved ? '1px solid var(--text-primary)' : '1px solid var(--border-subtle)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '6px',
@@ -170,7 +187,7 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontWeight: 600, fontSize: '13px' }}>{q.partnerName}</span>
-                          {idx === 0 && (
+                          {q.isPilotApproved && (
                             <span
                               style={{
                                 fontSize: '9px',
@@ -181,35 +198,41 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
                                 border: '1px solid var(--border-subtle)',
                               }}
                             >
-                              BEST RATE
+                              PILOT APPROVED
                             </span>
                           )}
                         </div>
                         <div className="font-mono text-muted" style={{ fontSize: '10px', marginTop: '2px' }}>
-                          {q.domain} • SEC Registered
+                          {q.domain}
                         </div>
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 700 }}>
-                          {rampType === 'buy' ? `${q.netCryptoUsdc} USDC` : `₦${q.fiatAmountNgn.toLocaleString()}`}
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>
+                          {q.netCryptoUsdc} USDC
                         </div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                          1 USDC = ₦{q.rateNgnPerUsdc}
+                        <div className="text-tertiary" style={{ fontSize: '10px' }}>
+                          Rate: ₦{q.rateNgnPerUsdc}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', paddingTop: '6px', borderTop: '1px dashed var(--border-subtle)' }}>
-                      <span>Fee: ₦{q.feeNgn.toFixed(0)} (~{q.arrivalMinutes}m arrival)</span>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => handleSelectQuote(q)}
-                        style={{ fontSize: '11px', padding: '3px 10px' }}
-                      >
-                        <span>Select</span>
-                        <ArrowRight size={12} />
-                      </button>
+                      <span>Fee: ₦{q.feeNgn.toFixed(0)} (~{q.arrivalMinutes}m)</span>
+                      {q.isPilotApproved ? (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleSelectQuote(q)}
+                          style={{ fontSize: '11px', padding: '3px 10px' }}
+                        >
+                          <span>Connect</span>
+                          <ArrowRight size={12} />
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                          Gated (Pending MoU)
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -218,10 +241,10 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
           </>
         )}
 
-        {/* Step 2: Payment Instructions & Fraud Warning */}
+        {/* Step 2: Genuine Hosted SEP-24 Flow Launcher */}
         {step === 'instructions' && selectedQuote && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Fraud Protection Box */}
+            {/* Anti-Fraud Box */}
             <div
               style={{
                 padding: '10px 12px',
@@ -235,11 +258,11 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
             >
               <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontSize: '11px', lineHeight: 1.4 }}>
-                <strong>Anti-Fraud Warning:</strong> Never send funds to unsolicited WhatsApp or Telegram agents. Only pay using the verified partner virtual account shown below.
+                <strong>Anti-Fraud Notice:</strong> Stellith will NEVER show bank account numbers directly in the extension. All payment instructions and identity checks are served exclusively on the anchor's verified hosted portal ({selectedQuote.domain}).
               </div>
             </div>
 
-            {/* All-in Breakdown */}
+            {/* Breakdown */}
             <div
               style={{
                 padding: '12px',
@@ -253,7 +276,7 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="text-muted">Partner:</span>
+                <span className="text-muted">Anchor Partner:</span>
                 <span style={{ fontWeight: 600 }}>{selectedQuote.partnerName}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -261,79 +284,44 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
                 <span className="font-mono">{selectedQuote.domain}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="text-muted">Rate:</span>
+                <span className="text-muted">Exchange Rate:</span>
                 <span>1 USDC = ₦{selectedQuote.rateNgnPerUsdc}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="text-muted">Fee:</span>
+                <span className="text-muted">Anchor Fee:</span>
                 <span>₦{selectedQuote.feeNgn.toFixed(0)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
-                <span>You Receive:</span>
+                <span>Estimated Receipt:</span>
                 <span style={{ fontSize: '14px' }}>{selectedQuote.netCryptoUsdc} USDC</span>
               </div>
             </div>
 
-            {/* Virtual Bank Transfer Details */}
             <div
               style={{
                 padding: '12px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
+                fontSize: '11px',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
               }}
             >
-              <span style={{ fontSize: '12px', fontWeight: 600 }}>Payment Instructions</span>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Bank Name</div>
-                  <div style={{ fontSize: '12px', fontWeight: 500 }}>Providus Bank / Moniepoint</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Account Number</div>
-                  <div className="font-mono" style={{ fontSize: '13px', fontWeight: 700 }}>
-                    9984729103
-                  </div>
-                </div>
-                <button
-                  className="btn btn-ghost btn-icon"
-                  onClick={() => copyToClipboard('9984729103', 'acc')}
-                  style={{ padding: '4px' }}
-                >
-                  {copiedField === 'acc' ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Payment Reference (Required)</div>
-                  <div className="font-mono" style={{ fontSize: '12px', fontWeight: 600 }}>
-                    STL-984210
-                  </div>
-                </div>
-                <button
-                  className="btn btn-ghost btn-icon"
-                  onClick={() => copyToClipboard('STL-984210', 'ref')}
-                  style={{ padding: '4px' }}
-                >
-                  {copiedField === 'ref' ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
+              <strong>SEP-24 Interactive Standard:</strong> Clicking below opens the partner's secure hosted window. Complete any required KYC and obtain official payment instructions directly on their domain.
             </div>
 
             <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
               {selectedQuote.referralDisclosure}
             </div>
 
-            <button className="btn btn-primary" onClick={handleStartInteractive} style={{ width: '100%' }}>
-              I Have Transferred ₦{selectedQuote.fiatAmountNgn.toLocaleString()}
+            <button
+              className="btn btn-primary"
+              onClick={handleLaunchInteractiveFlow}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <ExternalLink size={14} />
+              <span>Open {selectedQuote.partnerName} Hosted Portal</span>
             </button>
           </div>
         )}
@@ -358,9 +346,9 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
             </div>
 
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 4px' }}>Payment Processing</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 4px' }}>SEP-24 Session Active</h3>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
-                {activeTx.partnerName} is verifying settlement
+                {activeTx.partnerName} ({activeTx.domain})
               </p>
             </div>
 
@@ -378,11 +366,11 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="text-muted">Order ID:</span>
+                <span className="text-muted">Session ID:</span>
                 <span className="font-mono">{activeTx.id}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="text-muted">Amount Sent:</span>
+                <span className="text-muted">Deposit Amount:</span>
                 <span>₦{activeTx.fiatAmountNgn.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -399,9 +387,18 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
               </div>
             </div>
 
-            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
-              Funds typically arrive in your wallet within 5-15 minutes once your bank confirms the transfer.
-            </div>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.open) {
+                  window.open(activeTx.interactiveUrl, '_blank', 'noopener,noreferrer');
+                }
+              }}
+              style={{ width: '100%', gap: '6px' }}
+            >
+              <ExternalLink size={12} />
+              <span>Re-open Anchor Hosted Window</span>
+            </button>
 
             <button className="btn btn-primary" onClick={onSuccess} style={{ width: '100%' }}>
               Back to Home

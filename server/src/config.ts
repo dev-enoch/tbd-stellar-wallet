@@ -1,0 +1,61 @@
+import dotenv from 'dotenv';
+import { Keypair } from '@stellar/stellar-sdk';
+
+dotenv.config();
+
+export interface ServerConfig {
+  port: number;
+  stellarNetwork: 'testnet' | 'public';
+  horizonUrl: string;
+  sorobanRpcUrl: string;
+  networkPassphrase: string;
+  relayerKeypair: Keypair;
+  dailySponsoredLimit: number;
+  dailyGlobalBudgetStroops: number;
+  maxBaseFeeStroops: number;
+  allowedOperations: string[];
+}
+
+const NETWORK = (process.env.STELLAR_NETWORK as 'testnet' | 'public') || 'testnet';
+const IS_TESTNET = NETWORK === 'testnet';
+
+// For local testing & testnet, default to a deterministic sponsor keypair if none provided in env
+const defaultTestnetSponsorSecret =
+  process.env.RELAYER_SECRET_KEY ||
+  'SBQOXC75X5WBLJ4T4W3F2QYDFW2T3U35L5Z3ZJ46VMBP27Q6DFY5U4M3';
+
+let relayerKeypair: Keypair;
+try {
+  relayerKeypair = Keypair.fromSecret(defaultTestnetSponsorSecret);
+} catch {
+  // Generate random keypair if invalid secret
+  relayerKeypair = Keypair.random();
+}
+
+export const config: ServerConfig = {
+  port: parseInt(process.env.PORT || '3001', 10),
+  stellarNetwork: NETWORK,
+  horizonUrl: IS_TESTNET
+    ? 'https://horizon-testnet.stellar.org'
+    : 'https://horizon.stellar.org',
+  sorobanRpcUrl: IS_TESTNET
+    ? 'https://soroban-testnet.stellar.org'
+    : 'https://soroban-rpc.stellar.org',
+  networkPassphrase: IS_TESTNET
+    ? 'Test SDF Network ; September 2015'
+    : 'Public Global Stellar Network ; July 2015',
+  relayerKeypair,
+  dailySponsoredLimit: 5,
+  dailyGlobalBudgetStroops: 100_000_000, // 10 XLM per day total pool
+  maxBaseFeeStroops: 10_000, // 0.001 XLM per transaction max
+  allowedOperations: [
+    'payment',
+    'changeTrust',
+    'manageBuyOffer',
+    'manageSellOffer',
+    'createPassiveSellOffer',
+    'pathPaymentStrictReceive',
+    'pathPaymentStrictSend',
+    'invokeHostFunction',
+  ],
+};
