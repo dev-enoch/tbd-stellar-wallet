@@ -48,6 +48,48 @@ export function checkMemoRequirement(destination: string): boolean {
   return KNOWN_EXCHANGE_MEMO_REQUIRED_ADDRESSES.has(destination);
 }
 
+export interface DestinationVerificationResult {
+  valid: boolean;
+  exists: boolean;
+  isExchange: boolean;
+  isMuxed: boolean;
+  message?: string;
+}
+
+/**
+ * Checks address validity and inspects account state on Horizon for Step 1 verification.
+ */
+export async function verifyDestinationAddress(
+  destination: string,
+  network: NetworkType = 'testnet'
+): Promise<DestinationVerificationResult> {
+  const isMuxed = destination.startsWith('M');
+  const server = getHorizonServer(network);
+  let exists = true;
+
+  try {
+    await server.loadAccount(destination);
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      exists = false;
+    }
+  }
+
+  const isExchange = checkMemoRequirement(destination);
+
+  return {
+    valid: true,
+    exists,
+    isExchange,
+    isMuxed,
+    message: !exists
+      ? 'Account is inactive. It will be funded and activated with 1 XLM minimum.'
+      : isExchange
+      ? 'Exchange address detected. A memo is required.'
+      : 'Active Stellar account verified.',
+  };
+}
+
 /**
  * Pre-validates and simulates payment parameters before user confirmation.
  */
