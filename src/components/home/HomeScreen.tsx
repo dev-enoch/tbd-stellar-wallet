@@ -7,6 +7,7 @@ import {
   formatAddress,
   AccountBalanceSummary,
 } from '../../services/stellar';
+import { calculatePortfolioTotal } from '../../services/history';
 import {
   Send,
   Download,
@@ -18,6 +19,9 @@ import {
   Info,
   RefreshCw,
   Sparkles,
+  Clock,
+  Settings as SettingsIcon,
+  Home,
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -27,6 +31,7 @@ interface HomeScreenProps {
   onAddAsset: () => void;
   onSelectAsset?: (assetCode: string) => void;
   onOpenAccountSelector: () => void;
+  onOpenActivity: () => void;
   onOpenSettings: () => void;
 }
 
@@ -37,6 +42,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onAddAsset,
   onSelectAsset,
   onOpenAccountSelector,
+  onOpenActivity,
+  onOpenSettings,
 }) => {
   const { activeAccount, preferences, updatePreferences } = useWallet();
   const { t } = useI18n();
@@ -47,6 +54,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
   const [showReserveInfo, setShowReserveInfo] = useState<boolean>(false);
   const [fundingMessage, setFundingMessage] = useState<string>('');
+
+  const portfolio = calculatePortfolioTotal(balances?.assets || [], preferences.currency);
 
   const loadBalances = useCallback(async () => {
     if (!activeAccount) return;
@@ -175,12 +184,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {t.totalBalance}
           </div>
           <div style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.03em' }}>
-            {balances ? `${parseFloat(balances.totalXlm).toLocaleString()} XLM` : '—'}
+            {balances ? portfolio.formatted : '—'}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+            <span
+              className={`badge ${parseFloat(portfolio.totalChange24h) >= 0 ? 'badge-success' : 'badge-danger'}`}
+              style={{ fontSize: '10px', fontWeight: 600 }}
+            >
+              {parseFloat(portfolio.totalChange24h) >= 0 ? '+' : ''}{portfolio.totalChange24h}%
+            </span>
+            <span className="text-xs text-muted font-mono">
+              ({balances ? `${parseFloat(balances.totalXlm).toLocaleString()} XLM` : ''})
+            </span>
           </div>
 
           {/* Spendable vs Reserved Breakdown */}
           {balances && balances.exists && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
               <span className="text-xs text-muted">
                 {t.availableSpendable}: <strong style={{ color: 'var(--text-primary)' }}>{parseFloat(balances.spendableXlm).toLocaleString()} XLM</strong>
               </span>
@@ -322,6 +343,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Bottom Navigation Tabs */}
+      <div
+        style={{
+          marginTop: 'auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+          padding: '8px 0',
+        }}
+      >
+        <button
+          className="btn btn-ghost"
+          style={{ flexDirection: 'column', gap: '3px', fontSize: '10px', color: 'var(--accent)', fontWeight: 600 }}
+        >
+          <Home size={16} />
+          <span>Home</span>
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onOpenActivity}
+          style={{ flexDirection: 'column', gap: '3px', fontSize: '10px', color: 'var(--text-secondary)' }}
+        >
+          <Clock size={16} />
+          <span>Activity</span>
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onOpenSettings}
+          style={{ flexDirection: 'column', gap: '3px', fontSize: '10px', color: 'var(--text-secondary)' }}
+        >
+          <SettingsIcon size={16} />
+          <span>Settings</span>
+        </button>
       </div>
     </div>
   );

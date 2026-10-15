@@ -11,6 +11,8 @@ import { SendScreen } from './send/SendScreen';
 import { ReceiveScreen } from './receive/ReceiveScreen';
 import { ManageAssetsScreen } from './assets/ManageAssetsScreen';
 import { SwapScreen } from './swap/SwapScreen';
+import { HistoryScreen } from './history/HistoryScreen';
+import { AssetDetailScreen } from './portfolio/AssetDetailScreen';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { Sun, Moon, Globe, Lock } from 'lucide-react';
 
@@ -18,7 +20,15 @@ interface WalletRootProps {
   isPopup?: boolean;
 }
 
-export type WalletView = 'home' | 'send' | 'receive' | 'swap' | 'addAsset' | 'settings';
+export type WalletView =
+  | 'home'
+  | 'send'
+  | 'receive'
+  | 'swap'
+  | 'addAsset'
+  | 'history'
+  | 'assetDetail'
+  | 'settings';
 
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
   const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, lock, resetWallet } = useWallet();
@@ -27,6 +37,7 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
 
   const [onboardingView, setOnboardingView] = useState<'welcome' | 'create' | 'import'>('welcome');
   const [activeView, setActiveView] = useState<WalletView>('home');
+  const [selectedAssetCode, setSelectedAssetCode] = useState<string>('XLM');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const containerClass = isPopup ? 'popup-container' : 'popup-container';
@@ -130,13 +141,27 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
               onBack={() => setActiveView('home')}
               onSuccess={() => setActiveView('home')}
             />
+          ) : activeView === 'history' ? (
+            <HistoryScreen onBack={() => setActiveView('home')} />
+          ) : activeView === 'assetDetail' ? (
+            <AssetDetailScreen
+              assetCode={selectedAssetCode}
+              onBack={() => setActiveView('home')}
+              onSendAsset={(_code) => setActiveView('send')}
+              onSwapAsset={(_code) => setActiveView('swap')}
+            />
           ) : (
             <HomeScreen
               onSend={() => setActiveView('send')}
               onReceive={() => setActiveView('receive')}
               onSwap={() => setActiveView('swap')}
               onAddAsset={() => setActiveView('addAsset')}
+              onSelectAsset={(code) => {
+                setSelectedAssetCode(code);
+                setActiveView('assetDetail');
+              }}
               onOpenAccountSelector={() => setIsAccountModalOpen(true)}
+              onOpenActivity={() => setActiveView('history')}
               onOpenSettings={() => setActiveView('settings')}
             />
           )}
