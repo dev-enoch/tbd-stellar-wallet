@@ -26,6 +26,19 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         popup: resolve(__dirname, 'popup.html'),
+        background: resolve(__dirname, 'src/extension/background.ts'),
+        content: resolve(__dirname, 'src/extension/content.ts'),
+        inpage: resolve(__dirname, 'src/extension/inpage.ts'),
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (['background', 'content', 'inpage'].includes(chunkInfo.name)) {
+            return '[name].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
   },

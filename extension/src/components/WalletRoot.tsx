@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { useI18n } from '../contexts/I18nContext';
 import { WelcomeScreen } from './onboarding/WelcomeScreen';
 import { CreateWalletScreen } from './onboarding/CreateWalletScreen';
 import { ImportWalletScreen } from './onboarding/ImportWalletScreen';
@@ -16,7 +14,6 @@ import { AssetDetailScreen } from './portfolio/AssetDetailScreen';
 import { SettingsScreen } from './settings/SettingsScreen';
 import { DAppSandbox } from './dapp/DAppSandbox';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
-import { Sun, Moon, Globe, Lock, Settings as SettingsIcon } from 'lucide-react';
 
 interface WalletRootProps {
   isPopup?: boolean;
@@ -33,9 +30,7 @@ export type WalletView =
   | 'settings';
 
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
-  const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, lock, resetWallet } = useWallet();
-  const { theme, toggleTheme } = useTheme();
-  const { language, setLanguage, t } = useI18n();
+  const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, resetWallet } = useWallet();
 
   const [onboardingView, setOnboardingView] = useState<'welcome' | 'create' | 'import'>('welcome');
   const [activeView, setActiveView] = useState<WalletView>('home');
@@ -46,92 +41,8 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
 
   return (
     <div className={isPopup ? '' : 'wallet-shell'}>
-      {!isPopup && (
-        <header className="header" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img
-              src="/Stellith_logo.jpg"
-              alt="Stellith Logo"
-              style={{
-                width: '20px',
-                height: '20px',
-                objectFit: 'contain',
-                borderRadius: '3px',
-                filter: theme === 'dark' ? 'invert(1)' : 'none',
-              }}
-            />
-            <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>{t.appName}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setLanguage(language === 'en' ? 'ha' : 'en')}
-              title="Toggle English / Hausa"
-            >
-              <Globe size={14} />
-              <span>{language.toUpperCase()}</span>
-            </button>
-            <button className="btn btn-ghost btn-icon" onClick={toggleTheme} title="Toggle theme">
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            {!isLocked && isInitialized && (
-              <button className="btn btn-secondary btn-sm" onClick={lock}>
-                <Lock size={13} />
-                <span>{t.lockWallet}</span>
-              </button>
-            )}
-          </div>
-        </header>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: isPopup ? 'center' : 'flex-start', flexWrap: 'wrap', gap: '32px', minHeight: isPopup ? '100%' : 'calc(100vh - 60px)', padding: isPopup ? '0' : '32px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: isPopup ? 'center' : 'flex-start', flexWrap: 'wrap', gap: '32px', minHeight: isPopup ? '100%' : '100vh', padding: isPopup ? '0' : '32px 20px' }}>
         <div className={containerClass} style={{ height: '600px', borderRadius: isPopup ? 0 : 'var(--radius-lg)' }}>
-          {/* Extension internal top header */}
-          {isPopup && (
-            <div className="header" style={{ padding: '8px 12px' }}>
-              <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <img
-                  src="/Stellith_logo.jpg"
-                  alt="Stellith Logo"
-                  style={{
-                    width: '18px',
-                    height: '18px',
-                    objectFit: 'contain',
-                    borderRadius: '3px',
-                    filter: theme === 'dark' ? 'invert(1)' : 'none',
-                  }}
-                />
-                <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '-0.01em' }}>{t.appName}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  className="btn btn-ghost btn-icon"
-                  onClick={() => setLanguage(language === 'en' ? 'ha' : 'en')}
-                  title="Toggle Hausa/English"
-                  style={{ fontSize: '11px', fontWeight: 600, padding: '4px 6px' }}
-                >
-                  {language.toUpperCase()}
-                </button>
-                <button className="btn btn-ghost btn-icon" onClick={toggleTheme} title="Toggle Theme">
-                  {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                </button>
-                {!isLocked && isInitialized && (
-                  <>
-                    <button
-                      className="btn btn-ghost btn-icon"
-                      onClick={() => setActiveView('settings')}
-                      title={t.settingsTitle}
-                    >
-                      <SettingsIcon size={14} />
-                    </button>
-                    <button className="btn btn-ghost btn-icon" onClick={lock} title={t.lockWallet}>
-                      <Lock size={14} />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Screen Routing Content Area */}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
