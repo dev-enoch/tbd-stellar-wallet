@@ -11,8 +11,12 @@ export interface ServerConfig {
   networkPassphrase: string;
   relayerKeypair: Keypair;
   dailySponsoredLimit: number;
+  dailyIpSponsoredLimit: number;
   dailyGlobalBudgetStroops: number;
+  maxDeployPerIp: number;
+  maxGlobalDailyDeploys: number;
   maxBaseFeeStroops: number;
+  maxResourceFeeStroops: number;
   allowedOperations: string[];
 }
 
@@ -28,7 +32,6 @@ let relayerKeypair: Keypair;
 try {
   relayerKeypair = Keypair.fromSecret(defaultTestnetSponsorSecret);
 } catch {
-  // Generate random keypair if invalid secret
   relayerKeypair = Keypair.random();
 }
 
@@ -46,8 +49,12 @@ export const config: ServerConfig = {
     : 'Public Global Stellar Network ; July 2015',
   relayerKeypair,
   dailySponsoredLimit: 5,
-  dailyGlobalBudgetStroops: 100_000_000, // 10 XLM per day total pool
-  maxBaseFeeStroops: 10_000, // 0.001 XLM per transaction max
+  dailyIpSponsoredLimit: 10, // Max 10 sponsorship requests per IP/day
+  dailyGlobalBudgetStroops: 100_000_000, // 10 XLM per day total pool cap
+  maxDeployPerIp: 2, // Max 2 smart account deploys per IP/day to prevent relayer draining
+  maxGlobalDailyDeploys: 10, // Max 10 deployments across all users per day
+  maxBaseFeeStroops: 5_000, // 0.0005 XLM base fee hard cap
+  maxResourceFeeStroops: 100_000, // 0.01 XLM Soroban resource fee hard cap
   allowedOperations: [
     'payment',
     'changeTrust',

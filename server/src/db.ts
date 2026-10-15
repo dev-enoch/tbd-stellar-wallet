@@ -31,6 +31,9 @@ export interface AnchorDirectoryRecord {
 
 class RelayerDatabase {
   private usage: Map<string, SponsoredUsageRecord> = new Map();
+  private ipUsage: Map<string, number> = new Map(); // date:ip -> count
+  private ipDeploys: Map<string, number> = new Map(); // date:ip -> count
+  private dailyDeploys: Map<string, number> = new Map(); // date -> count
   private dailyBudget: Map<string, number> = new Map(); // date -> stroops used
   private accounts: Map<string, SmartAccountRecord> = new Map();
   private anchors: Map<string, AnchorDirectoryRecord> = new Map();
@@ -78,7 +81,7 @@ class RelayerDatabase {
     });
   }
 
-  // --- Sponsored Usage ---
+  // --- Sponsored Usage & IP limits ---
   getUsage(contractAddress: string, date: string): SponsoredUsageRecord {
     const key = `${date}:${contractAddress}`;
     return (
@@ -92,7 +95,11 @@ class RelayerDatabase {
     );
   }
 
-  recordUsage(contractAddress: string, date: string, feeStroops: number): SponsoredUsageRecord {
+  getIpUsage(ip: string, date: string): number {
+    return this.ipUsage.get(`${date}:${ip}`) || 0;
+  }
+
+  recordUsage(contractAddress: string, date: string, feeStroops: number, ip?: string): SponsoredUsageRecord {
     const key = `${date}:${contractAddress}`;
     const current = this.getUsage(contractAddress, date);
     const updated: SponsoredUsageRecord = {
@@ -103,6 +110,11 @@ class RelayerDatabase {
     };
     this.usage.set(key, updated);
 
+    if (ip) {
+      const ipKey = `${date}:${ip}`;
+      this.ipUsage.set(ipKey, (this.ipUsage.get(ipKey) || 0) + 1);
+    }
+
     // Update global budget
     const currentBudget = this.dailyBudget.get(date) || 0;
     this.dailyBudget.set(date, currentBudget + feeStroops);
@@ -112,6 +124,21 @@ class RelayerDatabase {
 
   getGlobalDailyBudgetUsed(date: string): number {
     return this.dailyBudget.get(date) || 0;
+  }
+
+  // --- Deployment Anti-Drain & Rate Limiting ---
+  getIpDeployCount(ip: string, date: string): number {
+    return this.ipDeploys.get(`${date}:${ip}`) || 0;
+  }
+
+  getDailyGlobalDeployCount(date: string): number {
+    return this.dailyDeploys.get(date) || 0;
+  }
+
+  recordDeployment(ip: string, date: string): void {
+    const ipKey = `${date}:${ip}`;
+    this.ipDeploys.set(ipKey, (this.ipDeploys.get(ipKey) || 0) + 1);
+    this.dailyDeploys.set(date, (this.dailyDeploys.get(date) || 0) + 1);
   }
 
   // --- Smart Accounts Registry ---
@@ -154,6 +181,9 @@ class RelayerDatabase {
 
   clearAll(): void {
     this.usage.clear();
+    this.ipUsage.clear();
+    this.ipDeploys.clear();
+    this.dailyDeploys.clear();
     this.dailyBudget.clear();
     this.accounts.clear();
     this.seedAnchors();

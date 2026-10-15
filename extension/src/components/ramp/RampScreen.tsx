@@ -10,7 +10,6 @@ import {
 import { formatAddress } from '../../services/stellar';
 import {
   ArrowLeft,
-  ArrowRight,
   ShieldAlert,
   Clock,
   ExternalLink,
@@ -106,7 +105,7 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
             >
               <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontSize: '11px', lineHeight: 1.4 }}>
-                <strong>Pilot & Regulatory Sandbox:</strong> Under draft Nigerian SEC digital asset rules and PRD go/no-go gates, live fiat trading requires a formal legal opinion and signed partner agreement. Currently operating in Sandbox mode.
+                <strong>Feature Paused (Coming Soon):</strong> Direct fiat buy/sell ramps are currently paused pending formal regulatory registration and anchor agreements. Transactions are disabled.
               </div>
             </div>
 
@@ -219,20 +218,15 @@ export const RampScreen: React.FC<RampScreenProps> = ({ onBack, onSuccess }) => 
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', paddingTop: '6px', borderTop: '1px dashed var(--border-subtle)' }}>
                       <span>Fee: ₦{q.feeNgn.toFixed(0)} (~{q.arrivalMinutes}m)</span>
-                      {q.isPilotApproved ? (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleSelectQuote(q)}
-                          style={{ fontSize: '11px', padding: '3px 10px' }}
-                        >
-                          <span>Connect</span>
-                          <ArrowRight size={12} />
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                          Gated (Pending MoU)
-                        </span>
-                      )}
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        disabled
+                        onClick={() => handleSelectQuote(q)}
+                        style={{ fontSize: '11px', padding: '3px 10px', opacity: 0.5, cursor: 'not-allowed' }}
+                        title="Fiat on/off-ramp is paused (Coming Soon)"
+                      >
+                        <span>Coming Soon</span>
+                      </button>
                     </div>
                   </div>
                 ))}

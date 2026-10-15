@@ -127,12 +127,13 @@ describe('Stellith Relayer & Backend Service', () => {
 
       const contractAddr = deployRes.body.contractAddress;
 
-      // Add backup device for recovery
+      // Add backup device for recovery with cryptographic signature from primary passkey
       const recoveryRes = await request(app)
         .post('/api/passkey/add-recovery')
         .send({
           contractAddress: contractAddr,
           recoveryCredentialId: 'cred_device_backup_laptop_456',
+          existingSignerAuthSignature: 'sig_valid_primary_webauthn',
         });
 
       expect(recoveryRes.status).toBe(200);

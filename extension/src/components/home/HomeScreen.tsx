@@ -43,7 +43,7 @@ interface HomeScreenProps {
   onOpenActivity: () => void;
   onOpenSettings: () => void;
   onOpenDashboard: () => void;
-  onOpenRamp: () => void;
+  onOpenRamp?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -56,7 +56,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenActivity,
   onOpenSettings,
   onOpenDashboard,
-  onOpenRamp,
+  onOpenRamp: _onOpenRamp,
 }) => {
   const { activeAccount, preferences, updatePreferences, lock } = useWallet();
   const { t, language, setLanguage } = useI18n();
@@ -270,17 +270,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
               </div>
 
-              {/* Naira Buy / Sell Ramp */}
+              {/* Naira Buy / Sell Ramp (Paused) */}
               <div
                 className="popover-item"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  onOpenRamp();
-                }}
+                style={{ opacity: 0.45, cursor: 'not-allowed' }}
+                title="Buy / Sell is paused pending regulatory licensing (Coming Soon)"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Banknote size={14} />
-                  <span>Buy / Sell Naira (SEP-24)</span>
+                  <span>Buy / Sell (Coming Soon)</span>
                 </div>
               </div>
 
@@ -482,9 +480,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Repeat size={18} />
             <span style={{ fontSize: '11px', fontWeight: 600 }}>{t.swapAction}</span>
           </button>
-          <button className="btn btn-secondary" onClick={onOpenRamp} style={{ flexDirection: 'column', padding: '12px 6px', gap: '6px' }}>
+          <button
+            className="btn btn-secondary"
+            disabled
+            style={{
+              flexDirection: 'column',
+              padding: '12px 6px',
+              gap: '6px',
+              opacity: 0.45,
+              cursor: 'not-allowed',
+            }}
+            title="Buy / Sell is paused pending regulatory licensing (Coming Soon)"
+          >
             <Banknote size={18} />
-            <span style={{ fontSize: '11px', fontWeight: 600 }}>Buy / Sell</span>
+            <span style={{ fontSize: '10px', fontWeight: 600 }}>Coming Soon</span>
           </button>
         </div>
 
