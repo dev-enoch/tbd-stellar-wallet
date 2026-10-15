@@ -6,6 +6,8 @@ import { WelcomeScreen } from './onboarding/WelcomeScreen';
 import { CreateWalletScreen } from './onboarding/CreateWalletScreen';
 import { ImportWalletScreen } from './onboarding/ImportWalletScreen';
 import { UnlockScreen } from './auth/UnlockScreen';
+import { HomeScreen } from './home/HomeScreen';
+import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { Sun, Moon, Globe, Lock } from 'lucide-react';
 
 interface WalletRootProps {
@@ -13,11 +15,12 @@ interface WalletRootProps {
 }
 
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
-  const { isInitialized, isLocked, activeAccount, createWallet, importWallet, importSecretKey, unlock, lock, resetWallet } = useWallet();
+  const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, lock, resetWallet } = useWallet();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useI18n();
 
   const [onboardingView, setOnboardingView] = useState<'welcome' | 'create' | 'import'>('welcome');
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const containerClass = isPopup ? 'popup-container' : 'popup-container';
 
@@ -107,17 +110,20 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
           ) : isLocked ? (
             <UnlockScreen onUnlock={unlock} onReset={resetWallet} />
           ) : (
-            <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
-              <div className="banner banner-info" style={{ marginBottom: '16px' }}>
-                <div>
-                  <strong>{activeAccount?.name || 'Account'}</strong> unlocked.
-                </div>
-              </div>
-              <p className="text-muted text-sm font-mono" style={{ wordBreak: 'break-all' }}>
-                {activeAccount?.publicKey}
-              </p>
-            </div>
+            <HomeScreen
+              onSend={() => console.info('Send clicked')}
+              onReceive={() => console.info('Receive clicked')}
+              onSwap={() => console.info('Swap clicked')}
+              onAddAsset={() => console.info('Add Asset clicked')}
+              onOpenAccountSelector={() => setIsAccountModalOpen(true)}
+              onOpenSettings={() => console.info('Settings clicked')}
+            />
           )}
+
+          <AccountSelectorModal
+            isOpen={isAccountModalOpen}
+            onClose={() => setIsAccountModalOpen(false)}
+          />
         </div>
       </div>
     </div>
