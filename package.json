@@ -1,0 +1,37 @@
+{
+  "name": "tbd-stellar-wallet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TBD — Non-custodial browser extension wallet for Stellar network",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.1.0",
+    "bip39": "^3.1.0",
+    "ed25519-hd-key": "^1.3.0",
+    "lucide-react": "^1.16.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^22.13.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.20.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0",
+    "vite": "^6.1.0",
+    "vite-plugin-node-polyfills": "^0.23.0",
+    "vitest": "^3.0.5"
+  }
+}
