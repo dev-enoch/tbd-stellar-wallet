@@ -1,27 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { I18nProvider, useI18n } from './contexts/I18nContext';
+import { I18nProvider } from './contexts/I18nContext';
+import { WalletProvider } from './contexts/WalletContext';
+import { WalletRoot } from './components/WalletRoot';
 import './styles/theme.css';
 import './styles/components.css';
-
-const PopupApp: React.FC = () => {
-  const { t } = useI18n();
-  return (
-    <div className="popup-container">
-      <header className="header">
-        <div className="brand">
-          <span>{t.appName}</span>
-          <span className="brand-badge">{t.tbdBadge}</span>
-        </div>
-      </header>
-      <main style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
-        <h2 className="text-lg">{t.welcomeTitle}</h2>
-        <p className="text-muted" style={{ marginTop: '6px' }}>{t.welcomeSubtitle}</p>
-      </main>
-    </div>
-  );
-};
 
 const root = document.getElementById('root');
 if (root) {
@@ -29,7 +13,9 @@ if (root) {
     <React.StrictMode>
       <ThemeProvider>
         <I18nProvider>
-          <PopupApp />
+          <WalletProvider>
+            <WalletRoot isPopup={true} />
+          </WalletProvider>
         </I18nProvider>
       </ThemeProvider>
     </React.StrictMode>
