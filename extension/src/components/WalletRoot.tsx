@@ -15,6 +15,7 @@ import { SettingsScreen } from './settings/SettingsScreen';
 import { DAppSandbox } from './dapp/DAppSandbox';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { DashboardView } from './dashboard/DashboardView';
+import { RampScreen } from './ramp/RampScreen';
 
 interface WalletRootProps {
   isPopup?: boolean;
@@ -29,7 +30,8 @@ export type WalletView =
   | 'history'
   | 'assetDetail'
   | 'settings'
-  | 'dashboard';
+  | 'dashboard'
+  | 'ramp';
 
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
   const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, resetWallet } = useWallet();
@@ -99,6 +101,11 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
               <SettingsScreen onBack={() => setActiveView('home')} />
             ) : activeView === 'dashboard' ? (
               <DashboardView onBack={() => setActiveView('home')} isFullTab={!isPopup} />
+            ) : activeView === 'ramp' ? (
+              <RampScreen
+                onBack={() => setActiveView('home')}
+                onSuccess={() => setActiveView('home')}
+              />
             ) : (
               <HomeScreen
                 onSend={() => setActiveView('send')}
@@ -113,6 +120,7 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
                 onOpenActivity={() => setActiveView('history')}
                 onOpenSettings={() => setActiveView('settings')}
                 onOpenDashboard={() => setActiveView('dashboard')}
+                onOpenRamp={() => setActiveView('ramp')}
               />
             )}
           </div>

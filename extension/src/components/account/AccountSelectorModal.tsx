@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useWallet } from '../../contexts/WalletContext';
 import { formatAddress } from '../../services/stellar';
-import { Check, Plus, Edit2, X, User, Cpu } from 'lucide-react';
+import { Check, Plus, Edit2, X, User, Cpu, Fingerprint } from 'lucide-react';
 import { LedgerConnectModal } from '../modals/LedgerConnectModal';
+import { PasskeyCreateModal } from '../modals/PasskeyCreateModal';
 
 interface AccountSelectorModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [showPasskeyModal, setShowPasskeyModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -150,6 +152,21 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
                             HW
                           </span>
                         )}
+                        {acc.type === 'passkey' && (
+                          <span
+                            style={{
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              padding: '1px 5px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'var(--bg-subtle)',
+                              border: '1px solid var(--border-subtle)',
+                              letterSpacing: '0.5px',
+                            }}
+                          >
+                            Smart
+                          </span>
+                        )}
                         <button
                           className="btn btn-ghost btn-icon"
                           style={{ padding: '2px' }}
@@ -197,23 +214,41 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
             </button>
           </div>
 
-          <button
-            className="btn btn-ghost"
-            onClick={() => setShowLedgerModal(true)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              border: '1px dashed var(--border-subtle)',
-              padding: '8px',
-              fontSize: '12px',
-            }}
-          >
-            <Cpu size={14} />
-            <span>Connect Hardware Wallet (Ledger)</span>
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShowPasskeyModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                border: '1px dashed var(--border-subtle)',
+                padding: '8px 6px',
+                fontSize: '11px',
+              }}
+            >
+              <Fingerprint size={14} />
+              <span>Create Passkey</span>
+            </button>
+
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShowLedgerModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                border: '1px dashed var(--border-subtle)',
+                padding: '8px 6px',
+                fontSize: '11px',
+              }}
+            >
+              <Cpu size={14} />
+              <span>Connect Ledger</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -221,6 +256,14 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
         isOpen={showLedgerModal}
         onClose={() => {
           setShowLedgerModal(false);
+          onClose();
+        }}
+      />
+
+      <PasskeyCreateModal
+        isOpen={showPasskeyModal}
+        onClose={() => {
+          setShowPasskeyModal(false);
           onClose();
         }}
       />
