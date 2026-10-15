@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { scanTransaction, ScanResult } from '../../services/scanning';
 import { VerdictStrip } from '../security/VerdictStrip';
+import { LedgerSigningModal } from '../security/LedgerSigningModal';
 
 interface SwapScreenProps {
   onBack: () => void;
@@ -498,6 +499,16 @@ export const SwapScreen: React.FC<SwapScreenProps> = ({ onBack, onSuccess }) => 
           </button>
         </div>
       )}
+
+      <LedgerSigningModal
+        isOpen={isSwapping && activeAccount?.type === 'ledger'}
+        destination="Stellar DEX Path Payment"
+        amount={fromAmount}
+        assetCode={fromCode}
+        fee={quote?.networkFee ? `${quote.networkFee} XLM` : '0.0000100 XLM'}
+        network={preferences.network}
+        onCancel={() => setIsSwapping(false)}
+      />
     </div>
   );
 };

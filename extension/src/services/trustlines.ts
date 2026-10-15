@@ -101,7 +101,7 @@ export function searchCuratedAssets(query: string, network: NetworkType = 'testn
  * Executes a change_trust operation to opt-in or opt-out of an asset trustline.
  */
 export async function submitChangeTrust(
-  keypair: Keypair,
+  keypair: Keypair | undefined,
   assetCode: string,
   assetIssuer: string,
   remove: boolean,
@@ -111,8 +111,11 @@ export async function submitChangeTrust(
   const server = getHorizonServer(network);
   const networkConfig = NETWORKS[network];
 
+  const sourcePubkey = signer ? signer.publicKey : keypair?.publicKey();
+  if (!sourcePubkey) throw new Error('No valid public key or signer provided');
+
   // 1. Load source account
-  const sourceAccount = await server.loadAccount(keypair.publicKey());
+  const sourceAccount = await server.loadAccount(sourcePubkey);
 
   // 2. Validate removal condition (balance must be 0)
   if (remove) {
@@ -152,6 +155,9 @@ export async function submitChangeTrust(
     };
   }
 
+  if (!keypair) {
+    throw new Error('No local keypair or hardware signer available to sign trustline transaction');
+  }
   transaction.sign(keypair);
 
   const response = await server.submitTransaction(transaction);

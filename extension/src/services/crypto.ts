@@ -19,6 +19,7 @@ export interface DecryptedVault {
     name: string;
     publicKey: string;
     type?: SignerType;
+    bipPath?: string;
   }[];
   activeAccountIndex: number;
 }
@@ -28,9 +29,10 @@ export interface DerivedAccount {
   name: string;
   publicKey: string;
   secretKey: string;
-  keypair: Keypair;
+  keypair?: Keypair;
   type?: SignerType;
   signer?: Signer;
+  bipPath?: string;
 }
 
 /**

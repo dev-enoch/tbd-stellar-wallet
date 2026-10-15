@@ -10,7 +10,7 @@ import { getHorizonServer, NETWORKS, NetworkType } from './stellar';
 import { Signer } from './signer';
 
 export interface SendPaymentParams {
-  keypair: Keypair;
+  keypair?: Keypair;
   destination: string;
   assetCode: string;
   assetIssuer?: string;
@@ -148,7 +148,9 @@ export async function submitPayment(params: SendPaymentParams): Promise<{ hash: 
   const networkConfig = NETWORKS[network];
 
   // 1. Load source account
-  const sourceAccount = await server.loadAccount(params.keypair.publicKey());
+  const sourcePubKey = params.signer ? params.signer.publicKey : params.keypair?.publicKey();
+  if (!sourcePubKey) throw new Error('No valid public key or signer provided for payment');
+  const sourceAccount = await server.loadAccount(sourcePubKey);
 
   // 2. Check destination status
   let destinationExists = true;
@@ -220,6 +222,9 @@ export async function submitPayment(params: SendPaymentParams): Promise<{ hash: 
     };
   }
 
+  if (!params.keypair) {
+    throw new Error('No local keypair or hardware signer available to sign transaction');
+  }
   transaction.sign(params.keypair);
 
   // 7. Submit to Horizon

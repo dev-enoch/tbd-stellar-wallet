@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { scanTransaction, ScanResult } from '../../services/scanning';
 import { VerdictStrip } from '../security/VerdictStrip';
+import { LedgerSigningModal } from '../security/LedgerSigningModal';
 
 interface SendScreenProps {
   onBack: () => void;
@@ -717,6 +718,16 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
           </div>
         )}
       </div>
+
+      <LedgerSigningModal
+        isOpen={isSubmitting && activeAccount?.type === 'ledger'}
+        destination={recipient}
+        amount={amount}
+        assetCode={assetCode}
+        memo={memoValue}
+        network={preferences.network}
+        onCancel={() => setIsSubmitting(false)}
+      />
     </div>
   );
 };
