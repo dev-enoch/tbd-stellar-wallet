@@ -27,9 +27,28 @@ if (typeof globalThis.localStorage === 'undefined') {
   };
 }
 
+if (typeof globalThis.sessionStorage === 'undefined') {
+  let sessionStore: Record<string, string> = {};
+  globalThis.sessionStorage = {
+    getItem: (key: string) => sessionStore[key] || null,
+    setItem: (key: string, value: string) => {
+      sessionStore[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete sessionStore[key];
+    },
+    clear: () => {
+      sessionStore = {};
+    },
+    length: 0,
+    key: () => null,
+  };
+}
+
 describe('Settings, Preferences & Vault Security', () => {
   beforeEach(async () => {
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('persists and updates network, currency, and auto-lock preferences', async () => {
@@ -126,4 +145,33 @@ describe('Settings, Preferences & Vault Security', () => {
     current = await storage.getKeystore();
     expect(current).toBeNull();
   });
+
+  it('manages session auth persistence for auto-lock timeout across popup closes', async () => {
+    // Initial state is null
+    let session = await storage.getSessionAuth();
+    expect(session).toBeNull();
+
+    // Set session auth
+    const now = Date.now();
+    await storage.setSessionAuth({
+      password: 'MockPassword123!',
+      lastActive: now,
+    });
+
+    session = await storage.getSessionAuth();
+    expect(session).not.toBeNull();
+    expect(session?.password).toBe('MockPassword123!');
+    expect(session?.lastActive).toBe(now);
+
+    // Update session activity
+    await storage.updateSessionActivity();
+    const updatedSession = await storage.getSessionAuth();
+    expect(updatedSession?.lastActive).toBeGreaterThanOrEqual(now);
+
+    // Clear session auth on explicit lock or reset
+    await storage.clearSessionAuth();
+    session = await storage.getSessionAuth();
+    expect(session).toBeNull();
+  });
 });
+

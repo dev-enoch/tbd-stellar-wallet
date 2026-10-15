@@ -14,6 +14,11 @@ export interface WalletPreferences {
   }[];
 }
 
+export interface SessionAuth {
+  password: string;
+  lastActive: number;
+}
+
 const defaultPreferences: WalletPreferences = {
   network: 'testnet', // Default to testnet for safe exploration as per PRD
   currency: 'USD',
@@ -73,5 +78,49 @@ export const storage = {
       });
     }
     localStorage.setItem(PREFS_KEY, JSON.stringify(updated));
+  },
+
+  async getSessionAuth(): Promise<SessionAuth | null> {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+      return new Promise((resolve) => {
+        chrome.storage.session.get(['tbd_session_auth'], (res) => {
+          resolve((res['tbd_session_auth'] as SessionAuth) || null);
+        });
+      });
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      const raw = sessionStorage.getItem('tbd_session_auth');
+      return raw ? JSON.parse(raw) : null;
+    }
+    return null;
+  },
+
+  async setSessionAuth(auth: SessionAuth): Promise<void> {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+      return new Promise((resolve) => {
+        chrome.storage.session.set({ ['tbd_session_auth']: auth }, () => resolve());
+      });
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('tbd_session_auth', JSON.stringify(auth));
+    }
+  },
+
+  async updateSessionActivity(): Promise<void> {
+    const current = await this.getSessionAuth();
+    if (current) {
+      await this.setSessionAuth({ ...current, lastActive: Date.now() });
+    }
+  },
+
+  async clearSessionAuth(): Promise<void> {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.session) {
+      return new Promise((resolve) => {
+        chrome.storage.session.remove(['tbd_session_auth'], () => resolve());
+      });
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('tbd_session_auth');
+    }
   },
 };
