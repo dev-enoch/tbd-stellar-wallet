@@ -27,14 +27,9 @@ export const UnlockScreen: React.FC<UnlockScreenProps> = ({ onUnlock, onReset })
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '24px 20px', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '32px 20px 24px', justifyContent: 'space-between', overflowY: 'auto' }}>
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
-          <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>{t.appName}</span>
-          <span className="brand-badge">{t.tbdBadge}</span>
-        </div>
-
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px', marginTop: '16px' }}>
           <div
             style={{
               width: '44px',

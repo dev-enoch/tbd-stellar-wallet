@@ -126,26 +126,36 @@ export const ManageAssetsScreen: React.FC<ManageAssetsScreenProps> = ({ onBack }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-        <button className="btn btn-ghost btn-icon" onClick={onBack}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Header - Compact */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+          flexShrink: 0,
+        }}
+      >
+        <button className="btn btn-ghost btn-icon" onClick={onBack} style={{ padding: '4px' }}>
           <ArrowLeft size={16} />
         </button>
-        <span className="text-xs text-muted" style={{ fontWeight: 600 }}>{t.manageAssetsTitle}</span>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.manageAssetsTitle}</span>
         <button
           className="btn btn-ghost btn-sm"
           onClick={() => {
             setIsCustomMode(!isCustomMode);
             setError('');
           }}
-          style={{ fontSize: '11px', color: 'var(--accent)' }}
+          style={{ fontSize: '11px', color: 'var(--accent)', padding: '2px 6px' }}
         >
           {isCustomMode ? 'Curated List' : '+ Custom'}
         </button>
       </div>
 
-      <div style={{ overflowY: 'auto', flex: 1, paddingRight: '2px' }}>
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '14px 16px 28px' }}>
         {/* Explanation Card */}
         <div className="panel-subtle" style={{ marginBottom: '14px' }}>
           <p className="text-muted text-xs" style={{ lineHeight: 1.45 }}>

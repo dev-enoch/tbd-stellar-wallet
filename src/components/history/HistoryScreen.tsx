@@ -64,24 +64,35 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <button className="btn btn-ghost btn-icon" onClick={onBack}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Header - Compact */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+          flexShrink: 0,
+        }}
+      >
+        <button className="btn btn-ghost btn-icon" onClick={onBack} style={{ padding: '4px' }}>
           <ArrowLeft size={16} />
         </button>
-        <span className="text-xs text-muted" style={{ fontWeight: 600 }}>{t.historyTitle}</span>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.historyTitle}</span>
         <button
           className="btn btn-ghost btn-icon"
           onClick={loadActivity}
           disabled={isLoading}
           title="Refresh activity"
+          style={{ padding: '4px' }}
         >
-          <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
         </button>
       </div>
 
-      <div style={{ overflowY: 'auto', flex: 1, paddingRight: '2px' }}>
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '14px 16px 28px' }}>
         {activities.length === 0 && !isLoading ? (
           <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
             <div
