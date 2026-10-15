@@ -137,6 +137,7 @@ export const SwapScreen: React.FC<SwapScreenProps> = ({ onBack, onSuccess }) => 
     try {
       const res = await executeSwap({
         keypair: activeAccount.keypair,
+        signer: activeAccount.signer,
         quote,
         network: preferences.network,
       });

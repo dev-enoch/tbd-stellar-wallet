@@ -180,6 +180,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
     try {
       const res = await submitPayment({
         keypair: activeAccount.keypair,
+        signer: activeAccount.signer,
         destination: recipient.trim(),
         assetCode,
         assetIssuer: selectedAsset?.issuer,

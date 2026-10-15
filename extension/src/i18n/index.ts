@@ -158,9 +158,46 @@ export interface Translations {
   revealPhrase: string;
   resetWallet: string;
   resetConfirmWarning: string;
-  aboutTitle: string;
-  versionLabel: string;
-}
+    aboutTitle: string;
+    versionLabel: string;
+
+    // Stellar Glossary (Section 6)
+    glossaryTitle: string;
+    glossaryTrustline: string;
+    glossaryReserve: string;
+    glossaryMemo: string;
+    glossarySwap: string;
+    glossarySlippage: string;
+    glossaryRecoveryPhrase: string;
+    glossaryNetworkFee: string;
+
+    // Malicious Transaction Scanning (Section 4)
+    threatScanningLabel: string;
+    threatScanningDesc: string;
+    scanSafe: string;
+    scanWarning: string;
+    scanBlocked: string;
+    scanUnavailable: string;
+    reportVerdict: string;
+
+    // Hardware Wallet (Ledger) (Section 5)
+    hardwareWallet: string;
+    connectLedger: string;
+    ledgerAppPrompt: string;
+    blindSigningWarning: string;
+    allowBlindSigning: string;
+
+    // Dashboard & Advanced Views (Section 7)
+    dashboardTitle: string;
+    pnlRealized: string;
+    pnlUnrealized: string;
+    priceAlerts: string;
+    orderHistory: string;
+    exportCsv: string;
+
+    // Localization Quality (Section 6)
+    reportTranslation: string;
+  }
 
 export const translations: Record<Language, Translations> = {
   en: {
@@ -311,6 +348,43 @@ export const translations: Record<Language, Translations> = {
     resetConfirmWarning: "This will delete all wallet data and keys from this browser. Ensure your recovery phrase is backed up.",
     aboutTitle: "About Stellith",
     versionLabel: "Version",
+
+    // Stellar Glossary
+    glossaryTitle: "Stellar Plain-Language Glossary",
+    glossaryTrustline: "Trustline (Asset Opt-In)",
+    glossaryReserve: "Network Reserve (Locked XLM)",
+    glossaryMemo: "Transaction Memo (Payment ID)",
+    glossarySwap: "DEX Swap (Path Payment)",
+    glossarySlippage: "Slippage Tolerance",
+    glossaryRecoveryPhrase: "12-Word Recovery Phrase",
+    glossaryNetworkFee: "Network Transaction Fee",
+
+    // Malicious Transaction Scanning
+    threatScanningLabel: "Malicious transaction scanning",
+    threatScanningDesc: "Screen contracts, domains, and recipients against threat intelligence before signing.",
+    scanSafe: "Transaction verified: No threats or deceptive contracts detected.",
+    scanWarning: "Security Warning: Suspicious contract or high slippage risk detected.",
+    scanBlocked: "Transaction Blocked: Known phishing domain or malicious scam contract.",
+    scanUnavailable: "Threat scanning unavailable. Verify transaction details carefully.",
+    reportVerdict: "Report a wrong verdict",
+
+    // Hardware Wallet (Ledger)
+    hardwareWallet: "Hardware Wallet",
+    connectLedger: "Connect Ledger Device",
+    ledgerAppPrompt: "Open the Stellar app on your Ledger and verify the address on screen.",
+    blindSigningWarning: "Blind signing disabled: Soroban smart contract calls cannot be clearly displayed on hardware devices.",
+    allowBlindSigning: "Allow blind signing of contract calls",
+
+    // Dashboard & Advanced Views
+    dashboardTitle: "Portfolio Dashboard",
+    pnlRealized: "Realized PnL",
+    pnlUnrealized: "Unrealized PnL",
+    priceAlerts: "Price Alerts",
+    orderHistory: "Order History",
+    exportCsv: "Export CSV",
+
+    // Localization Quality
+    reportTranslation: "Report translation issue",
   },
   ha: {
     appName: "Stellith",
@@ -460,5 +534,43 @@ export const translations: Record<Language, Translations> = {
     resetConfirmWarning: "Wannan zai goge duk bayanan walat ɗin daga wannan burauzar.",
     aboutTitle: "Game da Stellith",
     versionLabel: "Sigar",
+
+    // Stellar Glossary (Section 6)
+    glossaryTitle: "Ƙamus na Bayanan Stellar",
+    glossaryTrustline: "Layin Amana (Ba Da Izini)",
+    glossaryReserve: "Adana Na Hanyar Sadarwa (XLM da Aka Kulle)",
+    glossaryMemo: "Bayanin Kula (Memo ID)",
+    glossarySwap: "Musanya (DEX Path Payment)",
+    glossarySlippage: "Jurewar Canji (Slippage)",
+    glossaryRecoveryPhrase: "Kalmomin Farfadowa Guda 12",
+    glossaryNetworkFee: "Kudin Ma'amala na Hanyar Sadarwa",
+
+    // Malicious Transaction Scanning (Section 4)
+    threatScanningLabel: "Duba hada-hadar kuɗi mai cutarwa",
+    threatScanningDesc: "Duba kwangiloli, shafukan yanar gizo, da adiresoshin masu karɓa kafin sanya hannu.",
+    scanSafe: "An tantance hada-hadar: Babu wata barazana ko kwangilar yaudara.",
+    scanWarning: "Gargaɗin Tsaro: An gano kwangila mai tuhuma ko haɗarin zamewar farashi mai girma.",
+    scanBlocked: "An Toshe Hada-hadar: An gano adireshin zamba ko kwangilar yaudara da aka sani.",
+    scanUnavailable: "Duba barazana bai samu ba. Da fatan za a duba cikakkun bayanai a hankali.",
+    reportVerdict: "Ba da rahoton kuskuren hukunci",
+
+    // Hardware Wallet (Ledger) (Section 5)
+    hardwareWallet: "Walat ta Na'ura (Ledger)",
+    connectLedger: "Haɗa Na'urar Ledger",
+    ledgerAppPrompt: "Bude aikace-aikacen Stellar a kan Ledger dinka ka tabbatar da adireshin.",
+    blindSigningWarning: "An kashe sa hannu a rufe: Ba za a iya nuna cikakkun bayanan kwangilar Soroban a kan na'urar ba.",
+    allowBlindSigning: "Bada izinin sa hannu a rufe don kwangila",
+
+    // Dashboard & Advanced Views (Section 7)
+    dashboardTitle: "Dandalin Sarrafa Kadarori",
+    pnlRealized: "Ribar/Asarar Da Aka Tabbatar (Realized)",
+    pnlUnrealized: "Ribar/Asarar Da Ke Akwai (Unrealized)",
+    priceAlerts: "Faɗakarwar Farashi",
+    orderHistory: "Tarihin Odar DEX",
+    exportCsv: "Fitar da Bayanai (CSV)",
+
+    // Localization Quality (Section 6)
+    reportTranslation: "Ba da rahoton kuskuren fassara",
   },
 };
+

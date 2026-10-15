@@ -6,6 +6,7 @@ import {
   BASE_FEE,
 } from '@stellar/stellar-sdk';
 import { getHorizonServer, NETWORKS, NetworkType } from './stellar';
+import { Signer } from './signer';
 
 export interface CuratedAsset {
   code: string;
@@ -104,7 +105,8 @@ export async function submitChangeTrust(
   assetCode: string,
   assetIssuer: string,
   remove: boolean,
-  network: NetworkType = 'testnet'
+  network: NetworkType = 'testnet',
+  signer?: Signer
 ): Promise<{ hash: string; reserveDelta: number }> {
   const server = getHorizonServer(network);
   const networkConfig = NETWORKS[network];
@@ -140,6 +142,16 @@ export async function submitChangeTrust(
   txBuilder.setTimeout(30);
 
   const transaction = txBuilder.build();
+  if (signer) {
+    const signedXdr = await signer.signTransaction(transaction.toXDR(), networkConfig.networkPassphrase);
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, networkConfig.networkPassphrase);
+    const response = await server.submitTransaction(signedTx);
+    return {
+      hash: response.hash,
+      reserveDelta: remove ? -0.5 : 0.5,
+    };
+  }
+
   transaction.sign(keypair);
 
   const response = await server.submitTransaction(transaction);

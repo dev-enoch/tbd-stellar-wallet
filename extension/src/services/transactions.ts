@@ -7,6 +7,7 @@ import {
   BASE_FEE,
 } from '@stellar/stellar-sdk';
 import { getHorizonServer, NETWORKS, NetworkType } from './stellar';
+import { Signer } from './signer';
 
 export interface SendPaymentParams {
   keypair: Keypair;
@@ -17,6 +18,7 @@ export interface SendPaymentParams {
   memoType?: 'none' | 'text' | 'id' | 'hash';
   memoValue?: string;
   network?: NetworkType;
+  signer?: Signer;
 }
 
 export interface PaymentSimulationResult {
@@ -208,6 +210,16 @@ export async function submitPayment(params: SendPaymentParams): Promise<{ hash: 
 
   // 6. Build and sign
   const transaction = txBuilder.build();
+  if (params.signer) {
+    const signedXdr = await params.signer.signTransaction(transaction.toXDR(), networkConfig.networkPassphrase);
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, networkConfig.networkPassphrase);
+    const response = await server.submitTransaction(signedTx);
+    return {
+      hash: response.hash,
+      ledger: (response as any).ledger || 0,
+    };
+  }
+
   transaction.sign(params.keypair);
 
   // 7. Submit to Horizon
