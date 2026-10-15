@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "TBD — Non-custodial browser extension wallet for Stellar network",
+  "description": "Stellith — Non-custodial browser extension wallet for Stellar network",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

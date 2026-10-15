@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Shield, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Download } from 'lucide-react';
 
 interface WelcomeScreenProps {
@@ -9,14 +10,25 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreate, onImport }) => {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const [showSecurityInfo, setShowSecurityInfo] = useState(false);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', padding: '24px 20px' }}>
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
+          <img
+            src="/Stellith_logo.jpg"
+            alt="Stellith Logo"
+            style={{
+              width: '26px',
+              height: '26px',
+              objectFit: 'contain',
+              borderRadius: '4px',
+              filter: theme === 'dark' ? 'invert(1)' : 'none',
+            }}
+          />
           <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.03em' }}>{t.appName}</span>
-          <span className="brand-badge">{t.tbdBadge}</span>
         </div>
 
         <h1 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.02em', marginBottom: '12px' }}>

@@ -1,11 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "TBD — Stellar Wallet",
+  "name": "Stellith — Stellar Wallet",
   "version": "1.0.0",
   "description": "A non-custodial browser-extension wallet for the Stellar network with plain-language previews and smart routing.",
+  "icons": {
+    "16": "Stellith_logo.jpg",
+    "48": "Stellith_logo.jpg",
+    "128": "Stellith_logo.jpg"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "TBD Wallet"
+    "default_title": "Stellith Wallet",
+    "default_icon": {
+      "16": "Stellith_logo.jpg",
+      "48": "Stellith_logo.jpg",
+      "128": "Stellith_logo.jpg"
+    }
   },
   "permissions": [
     "storage",

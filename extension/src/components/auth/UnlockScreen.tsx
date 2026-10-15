@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
-import { Lock, AlertCircle, RefreshCw } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 interface UnlockScreenProps {
   onUnlock: (password: string) => Promise<void>;
@@ -9,6 +10,7 @@ interface UnlockScreenProps {
 
 export const UnlockScreen: React.FC<UnlockScreenProps> = ({ onUnlock, onReset }) => {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,21 +32,18 @@ export const UnlockScreen: React.FC<UnlockScreenProps> = ({ onUnlock, onReset })
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '32px 20px 24px', justifyContent: 'space-between', overflowY: 'auto' }}>
       <div>
         <div style={{ textAlign: 'center', marginBottom: '28px', marginTop: '16px' }}>
-          <div
+          <img
+            src="/Stellith_logo.jpg"
+            alt="Stellith Logo"
             style={{
               width: '44px',
               height: '44px',
-              borderRadius: 'var(--radius-full)',
-              background: 'var(--bg-subtle)',
-              border: '1px solid var(--border-subtle)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              objectFit: 'contain',
+              borderRadius: '8px',
               marginBottom: '12px',
+              filter: theme === 'dark' ? 'invert(1)' : 'none',
             }}
-          >
-            <Lock size={20} color="var(--text-secondary)" />
-          </div>
+          />
           <h2 className="text-lg">{t.unlockTitle}</h2>
         </div>
 
@@ -107,7 +106,7 @@ export const UnlockScreen: React.FC<UnlockScreenProps> = ({ onUnlock, onReset })
       </div>
 
       <div style={{ textAlign: 'center' }}>
-        <span className="text-xs text-tertiary">TBD v1.0.0</span>
+        <span className="text-xs text-tertiary">Stellith v1.0.0</span>
       </div>
     </div>
   );

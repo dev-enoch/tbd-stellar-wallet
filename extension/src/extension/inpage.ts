@@ -56,5 +56,7 @@ const TBD_PROVIDER = {
 
 (window as any).stellar = TBD_PROVIDER;
 (window as any).freighter = TBD_PROVIDER;
+(window as any).stellith = TBD_PROVIDER;
+(window as any).stellithWallet = TBD_PROVIDER;
 (window as any).tbdWallet = TBD_PROVIDER;
 export {};

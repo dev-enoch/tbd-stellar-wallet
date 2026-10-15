@@ -22,8 +22,8 @@ describe('i18n translations', () => {
     expect(translations.ha.trustlineExplanation).toContain('ba da izini');
   });
 
-  it('keeps brand name as TBD across languages', () => {
-    expect(translations.en.appName).toBe('TBD');
-    expect(translations.ha.appName).toBe('TBD');
+  it('keeps brand name as Stellith across languages', () => {
+    expect(translations.en.appName).toBe('Stellith');
+    expect(translations.ha.appName).toBe('Stellith');
   });
 });

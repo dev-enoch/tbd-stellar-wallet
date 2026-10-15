@@ -31,7 +31,7 @@ const PopupEntry: React.FC = () => {
           background: 'var(--bg-app)',
         }}
       >
-        <span className="text-xs text-muted">Loading TBD Wallet…</span>
+        <span className="text-xs text-muted">Loading Stellith Wallet…</span>
       </div>
     );
   }
@@ -53,8 +53,17 @@ const PopupEntry: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px', fontWeight: 700 }}>TBD</span>
-          <span className="brand-badge">TBD</span>
+          <img
+            src="/Stellith_logo.jpg"
+            alt="Stellith Logo"
+            style={{
+              width: '28px',
+              height: '28px',
+              objectFit: 'contain',
+              borderRadius: '6px',
+            }}
+          />
+          <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>Stellith</span>
         </div>
         <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>Create or Import Wallet</h2>
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
