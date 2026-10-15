@@ -29,6 +29,8 @@ import {
   Globe,
   Lock,
   TrendingUp,
+  Banknote,
+  Fingerprint,
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -41,6 +43,7 @@ interface HomeScreenProps {
   onOpenActivity: () => void;
   onOpenSettings: () => void;
   onOpenDashboard: () => void;
+  onOpenRamp: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -53,6 +56,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenActivity,
   onOpenSettings,
   onOpenDashboard,
+  onOpenRamp,
 }) => {
   const { activeAccount, preferences, updatePreferences, lock } = useWallet();
   const { t, language, setLanguage } = useI18n();
@@ -266,6 +270,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
               </div>
 
+              {/* Naira Buy / Sell Ramp */}
+              <div
+                className="popover-item"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenRamp();
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Banknote size={14} />
+                  <span>Buy / Sell Naira (SEP-24)</span>
+                </div>
+              </div>
+
               {/* Settings */}
               <div
                 className="popover-item"
@@ -430,6 +448,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         )}
 
+        {/* Passkey Smart Account Health & Sponsorship Strip */}
+        {activeAccount?.type === 'passkey' && (
+          <div
+            className="panel-subtle"
+            style={{
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Fingerprint size={14} />
+              <span>Smart Account · <strong>5/5 sponsored daily fees</strong></span>
+            </div>
+            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>No seed phrase needed</span>
+          </div>
+        )}
+
         {/* 4 Primary Action Buttons */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
           <button className="btn btn-secondary" onClick={onSend} style={{ flexDirection: 'column', padding: '12px 6px', gap: '6px' }}>
@@ -444,9 +482,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Repeat size={18} />
             <span style={{ fontSize: '11px', fontWeight: 600 }}>{t.swapAction}</span>
           </button>
-          <button className="btn btn-secondary" onClick={onAddAsset} style={{ flexDirection: 'column', padding: '12px 6px', gap: '6px' }}>
-            <PlusCircle size={18} />
-            <span style={{ fontSize: '11px', fontWeight: 600 }}>{t.addAssetAction}</span>
+          <button className="btn btn-secondary" onClick={onOpenRamp} style={{ flexDirection: 'column', padding: '12px 6px', gap: '6px' }}>
+            <Banknote size={18} />
+            <span style={{ fontSize: '11px', fontWeight: 600 }}>Buy / Sell</span>
           </button>
         </div>
 
@@ -454,11 +492,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span className="text-xs text-muted" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {t.assetsTitle}
+              {t.assetsTitle} ({balances?.assets.length || 0})
             </span>
-            <span className="text-xs text-tertiary">
-              {balances?.assets.length || 0} {balances?.assets.length === 1 ? 'asset' : 'assets'}
-            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onAddAsset}
+              style={{
+                fontSize: '11px',
+                padding: '2px 8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+              title={t.addAssetAction}
+            >
+              <PlusCircle size={12} />
+              <span>{t.addAssetAction}</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

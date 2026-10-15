@@ -8,7 +8,7 @@ import {
   decryptVault,
   fromSecretKey,
 } from '../services/crypto';
-import { LocalKeySigner, LedgerSigner } from '../services/signer';
+import { LocalKeySigner, LedgerSigner, PasskeySigner } from '../services/signer';
 import { storage, WalletPreferences } from '../services/storage';
 
 interface WalletContextType {
@@ -27,6 +27,7 @@ interface WalletContextType {
   resetWallet: () => Promise<void>;
   addAccount: (name?: string) => Promise<DerivedAccount>;
   addLedgerAccount: (publicKey: string, bipPath: string, name?: string) => Promise<DerivedAccount>;
+  addPasskeyAccount: (contractAddress: string, credentialId: string, name?: string) => Promise<DerivedAccount>;
   switchAccount: (index: number) => void;
   revealPhrase: (password: string) => Promise<string>;
   revealPrivateKey: (password: string) => Promise<string>;
@@ -298,6 +299,16 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               preferences.allowBlindSigning
             ),
           });
+        } else if (acc.type === 'passkey') {
+          derivedAccounts.push({
+            index: acc.index,
+            name: acc.name,
+            publicKey: acc.publicKey,
+            secretKey: '',
+            type: 'passkey',
+            bipPath: acc.bipPath || '',
+            signer: new PasskeySigner(acc.publicKey, acc.bipPath || ''),
+          });
         } else {
           const derived = await deriveStellarKeypair(vault.mnemonic, acc.index);
           derivedAccounts.push({
@@ -396,6 +407,49 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return newAccount;
   };
 
+  const addPasskeyAccount = async (
+    contractAddress: string,
+    credentialId: string,
+    name?: string
+  ): Promise<DerivedAccount> => {
+    const nextIndex = accounts.length;
+    const accountName = name || `Smart Account ${nextIndex + 1}`;
+    const passkeySigner = new PasskeySigner(contractAddress, credentialId);
+
+    const newAccount: DerivedAccount = {
+      index: nextIndex,
+      name: accountName,
+      publicKey: contractAddress,
+      secretKey: '',
+      type: 'passkey',
+      bipPath: credentialId,
+      signer: passkeySigner,
+    };
+
+    const updatedAccounts = [...accounts, newAccount];
+    setAccounts(updatedAccounts);
+    setActiveAccountIndex(updatedAccounts.length - 1);
+
+    if (cachedPasswordRef.current && keystore && mnemonic) {
+      const updatedVault: DecryptedVault = {
+        mnemonic,
+        accounts: updatedAccounts.map((a) => ({
+          index: a.index,
+          name: a.name,
+          publicKey: a.publicKey,
+          type: a.type,
+          bipPath: a.bipPath,
+        })),
+        activeAccountIndex: updatedAccounts.length - 1,
+      };
+      const newEncrypted = await encryptVault(updatedVault, cachedPasswordRef.current);
+      await storage.setKeystore(newEncrypted);
+      setKeystore(newEncrypted);
+    }
+
+    return newAccount;
+  };
+
   const switchAccount = (index: number) => {
     if (index >= 0 && index < accounts.length) {
       setActiveAccountIndex(index);
@@ -416,6 +470,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (active?.type === 'ledger') {
       throw new Error(
         'Ledger hardware wallet keys are secured directly inside your physical device and cannot be revealed or exported.'
+      );
+    }
+    if (active?.type === 'passkey') {
+      throw new Error(
+        'Passkey smart accounts are secured by your device biometrics / security key and do not have an exportable private key.'
       );
     }
     if (!keystore) throw new Error('No keystore found');
@@ -474,6 +533,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         resetWallet,
         addAccount,
         addLedgerAccount,
+        addPasskeyAccount,
         switchAccount,
         revealPhrase,
         revealPrivateKey,
