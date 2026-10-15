@@ -25,6 +25,8 @@ import {
   Loader2,
   ShieldAlert,
 } from 'lucide-react';
+import { scanTransaction, ScanResult } from '../../services/scanning';
+import { VerdictStrip } from '../security/VerdictStrip';
 
 interface SendScreenProps {
   onBack: () => void;
@@ -56,6 +58,35 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [txHash, setTxHash] = useState('');
+
+  // Threat Scanning States (PRD Section 4)
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [threatOverridden, setThreatOverridden] = useState(false);
+
+  // Scan transaction before confirmation
+  useEffect(() => {
+    if (step === 3 && activeAccount && recipient) {
+      let isCancelled = false;
+      setIsScanning(true);
+      setThreatOverridden(false);
+      scanTransaction({
+        destination: recipient.trim(),
+        assetCode,
+        amount,
+        memo: memoValue,
+        enabled: preferences.threatScanningEnabled,
+      }).then((res) => {
+        if (!isCancelled) {
+          setScanResult(res);
+          setIsScanning(false);
+        }
+      });
+      return () => {
+        isCancelled = true;
+      };
+    }
+  }, [step, recipient, assetCode, amount, memoValue, preferences.threatScanningEnabled, activeAccount]);
 
   // Load balances
   useEffect(() => {
@@ -497,6 +528,14 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
               </p>
             </div>
 
+            {/* Security Verdict Strip (PRD Section 4) */}
+            <VerdictStrip
+              scanResult={scanResult}
+              isLoading={isScanning}
+              onOverrideChange={setThreatOverridden}
+              isOverridden={threatOverridden}
+            />
+
             {/* Exchange Memo Warning */}
             {verification?.isExchange && (
               <div
@@ -593,9 +632,16 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
               </button>
               <button
                 type="button"
-                className="btn btn-primary"
+                className={`btn ${scanResult?.verdict === 'blocked' ? 'btn-danger' : 'btn-primary'}`}
                 onClick={handleConfirmSend}
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  isScanning ||
+                  ((scanResult?.verdict === 'blocked' ||
+                    scanResult?.verdict === 'warning' ||
+                    scanResult?.verdict === 'unavailable') &&
+                    !threatOverridden)
+                }
                 style={{ flex: 2, gap: '6px' }}
               >
                 {isSubmitting ? (

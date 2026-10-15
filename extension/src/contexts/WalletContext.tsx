@@ -48,6 +48,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     network: 'testnet',
     currency: 'USD',
     autoLockMinutes: 15,
+    threatScanningEnabled: true,
+    allowBlindSigning: false,
     connectedSites: [],
   });
 
