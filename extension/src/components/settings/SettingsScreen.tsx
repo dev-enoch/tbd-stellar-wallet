@@ -3,7 +3,7 @@ import { useWallet } from '../../contexts/WalletContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
-  ArrowLeft,
+  ChevronLeft,
   ChevronRight,
   Shield,
   Globe,
@@ -862,10 +862,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         </div>
       )}
 
-      {/* Screen Header */}
-      <div className="screen-header">
+      {/* Screen Header — Apple Navigation Bar */}
+      <div
+        style={{
+          position: 'relative',
+          height: '44px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 8px',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+          flexShrink: 0,
+        }}
+      >
         <button
-          className="btn-icon"
+          type="button"
           onClick={() => {
             if (subpage !== 'main') {
               setSubpage('main');
@@ -873,16 +885,47 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               onBack();
             }
           }}
-          title={subpage !== 'main' ? 'Back to Settings' : 'Back'}
-          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+          title={subpage !== 'main' ? 'Back to Settings' : 'Back to Wallet'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '2px',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-primary)',
+            padding: '4px 6px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            zIndex: 2,
+          }}
         >
-          <ArrowLeft size={16} />
-          {subpage !== 'main' && <span style={{ fontSize: '11px', fontWeight: 500 }}>Settings</span>}
+          <ChevronLeft size={18} />
+          <span>{subpage !== 'main' ? 'Settings' : 'Wallet'}</span>
         </button>
-        <span className="screen-title" style={{ margin: '0 auto' }}>
+
+        {/* Mathematically Centered Title */}
+        <span
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            maxWidth: '180px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            pointerEvents: 'none',
+          }}
+        >
           {getSubpageTitle()}
         </span>
-        <div style={{ width: '32px' }} />
+
+        <div style={{ width: '64px' }} />
       </div>
 
       {/* Scrollable Content */}
