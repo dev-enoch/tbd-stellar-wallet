@@ -7,6 +7,8 @@ import { CreateWalletScreen } from './onboarding/CreateWalletScreen';
 import { ImportWalletScreen } from './onboarding/ImportWalletScreen';
 import { UnlockScreen } from './auth/UnlockScreen';
 import { HomeScreen } from './home/HomeScreen';
+import { SendScreen } from './send/SendScreen';
+import { ReceiveScreen } from './receive/ReceiveScreen';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { Sun, Moon, Globe, Lock } from 'lucide-react';
 
@@ -14,12 +16,15 @@ interface WalletRootProps {
   isPopup?: boolean;
 }
 
+export type WalletView = 'home' | 'send' | 'receive' | 'swap' | 'addAsset' | 'settings';
+
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
   const { isInitialized, isLocked, createWallet, importWallet, importSecretKey, unlock, lock, resetWallet } = useWallet();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useI18n();
 
   const [onboardingView, setOnboardingView] = useState<'welcome' | 'create' | 'import'>('welcome');
+  const [activeView, setActiveView] = useState<WalletView>('home');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const containerClass = isPopup ? 'popup-container' : 'popup-container';
@@ -109,14 +114,21 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
             </>
           ) : isLocked ? (
             <UnlockScreen onUnlock={unlock} onReset={resetWallet} />
+          ) : activeView === 'send' ? (
+            <SendScreen
+              onBack={() => setActiveView('home')}
+              onSuccess={() => setActiveView('home')}
+            />
+          ) : activeView === 'receive' ? (
+            <ReceiveScreen onBack={() => setActiveView('home')} />
           ) : (
             <HomeScreen
-              onSend={() => console.info('Send clicked')}
-              onReceive={() => console.info('Receive clicked')}
-              onSwap={() => console.info('Swap clicked')}
-              onAddAsset={() => console.info('Add Asset clicked')}
+              onSend={() => setActiveView('send')}
+              onReceive={() => setActiveView('receive')}
+              onSwap={() => setActiveView('swap')}
+              onAddAsset={() => setActiveView('addAsset')}
               onOpenAccountSelector={() => setIsAccountModalOpen(true)}
-              onOpenSettings={() => console.info('Settings clicked')}
+              onOpenSettings={() => setActiveView('settings')}
             />
           )}
 
