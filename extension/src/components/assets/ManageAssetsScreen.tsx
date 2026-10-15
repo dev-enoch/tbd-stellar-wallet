@@ -74,7 +74,8 @@ export const ManageAssetsScreen: React.FC<ManageAssetsScreenProps> = ({ onBack }
         asset.code,
         asset.issuer,
         remove,
-        preferences.network
+        preferences.network,
+        activeAccount.signer
       );
 
       setSuccessMsg(
@@ -112,7 +113,7 @@ export const ManageAssetsScreen: React.FC<ManageAssetsScreenProps> = ({ onBack }
 
     setIsProcessing(code);
     try {
-      await submitChangeTrust(activeAccount.keypair, code, issuer, false, preferences.network);
+      await submitChangeTrust(activeAccount.keypair, code, issuer, false, preferences.network, activeAccount.signer);
       setSuccessMsg(`Opted in to custom asset ${code}.`);
       setCustomCode('');
       setCustomIssuer('');

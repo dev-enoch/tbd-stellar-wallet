@@ -8,6 +8,7 @@ import {
   decryptVault,
   fromSecretKey,
 } from '../services/crypto';
+import { LocalKeySigner } from '../services/signer';
 import { storage, WalletPreferences } from '../services/storage';
 
 interface WalletContextType {
@@ -91,6 +92,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     publicKey: kp.publicKey(),
                     secretKey: kp.secret(),
                     keypair: kp,
+                    type: 'local',
+                    signer: new LocalKeySigner(kp),
                   });
                 } else {
                   for (const acc of vault.accounts) {
@@ -210,6 +213,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       publicKey: kp.publicKey(),
       secretKey: kp.secret(),
       keypair: kp,
+      type: 'local',
+      signer: new LocalKeySigner(kp),
     };
 
     const vault: DecryptedVault = {
@@ -219,6 +224,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           index: 0,
           name: 'Imported Account',
           publicKey: account.publicKey,
+          type: 'local',
         },
       ],
       activeAccountIndex: 0,
@@ -252,6 +258,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         publicKey: kp.publicKey(),
         secretKey: kp.secret(),
         keypair: kp,
+        type: 'local',
+        signer: new LocalKeySigner(kp),
       });
     } else {
       for (const acc of vault.accounts) {

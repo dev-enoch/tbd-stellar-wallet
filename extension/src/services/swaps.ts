@@ -6,6 +6,7 @@ import {
   BASE_FEE,
 } from '@stellar/stellar-sdk';
 import { getHorizonServer, NETWORKS, NetworkType } from './stellar';
+import { Signer } from './signer';
 
 export interface SwapQuote {
   fromAssetCode: string;
@@ -28,6 +29,7 @@ export interface SwapParams {
   keypair: Keypair;
   quote: SwapQuote;
   network?: NetworkType;
+  signer?: Signer;
 }
 
 /**
@@ -193,6 +195,16 @@ export async function executeSwap(params: SwapParams): Promise<{ hash: string; o
   txBuilder.setTimeout(30);
 
   const transaction = txBuilder.build();
+  if (params.signer) {
+    const signedXdr = await params.signer.signTransaction(transaction.toXDR(), networkConfig.networkPassphrase);
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, networkConfig.networkPassphrase);
+    const response = await server.submitTransaction(signedTx);
+    return {
+      hash: response.hash,
+      outputAmount: params.quote.expectedOutput,
+    };
+  }
+
   transaction.sign(params.keypair);
 
   const response = await server.submitTransaction(transaction);

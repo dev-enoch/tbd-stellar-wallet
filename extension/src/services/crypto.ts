@@ -2,6 +2,8 @@ import * as bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import { Keypair } from '@stellar/stellar-sdk';
 
+import { Signer, LocalKeySigner, SignerType } from './signer';
+
 export interface EncryptedKeystore {
   version: number;
   cipherText: string; // base64
@@ -16,6 +18,7 @@ export interface DecryptedVault {
     index: number;
     name: string;
     publicKey: string;
+    type?: SignerType;
   }[];
   activeAccountIndex: number;
 }
@@ -26,6 +29,8 @@ export interface DerivedAccount {
   publicKey: string;
   secretKey: string;
   keypair: Keypair;
+  type?: SignerType;
+  signer?: Signer;
 }
 
 /**
@@ -54,6 +59,7 @@ export async function deriveStellarKeypair(mnemonic: string, accountIndex: numbe
   
   // The derived 32-byte key is the raw Ed25519 seed for Stellar Keypair
   const keypair = Keypair.fromRawEd25519Seed(key);
+  const signer = new LocalKeySigner(keypair);
 
   return {
     index: accountIndex,
@@ -61,6 +67,8 @@ export async function deriveStellarKeypair(mnemonic: string, accountIndex: numbe
     publicKey: keypair.publicKey(),
     secretKey: keypair.secret(),
     keypair,
+    type: 'local',
+    signer,
   };
 }
 
