@@ -27,6 +27,7 @@ interface WalletContextType {
   addAccount: (name?: string) => Promise<DerivedAccount>;
   switchAccount: (index: number) => void;
   revealPhrase: (password: string) => Promise<string>;
+  revealPrivateKey: (password: string) => Promise<string>;
   updatePreferences: (prefs: Partial<WalletPreferences>) => Promise<void>;
 }
 
@@ -307,6 +308,16 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return vault.mnemonic;
   };
 
+  const revealPrivateKey = async (password: string): Promise<string> => {
+    if (!keystore) throw new Error('No keystore found');
+    const vault = await decryptVault(keystore, password);
+    if (vault.mnemonic.startsWith('imported:')) {
+      return vault.mnemonic.replace('imported:', '');
+    }
+    const keypair = await deriveStellarKeypair(vault.mnemonic, activeAccountIndex);
+    return keypair.secretKey;
+  };
+
   const resetWallet = async (): Promise<void> => {
     await storage.removeKeystore();
     await storage.clearSessionAuth().catch(() => {});
@@ -344,6 +355,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addAccount,
         switchAccount,
         revealPhrase,
+        revealPrivateKey,
         updatePreferences,
       }}
     >

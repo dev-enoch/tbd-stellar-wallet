@@ -25,60 +25,78 @@ export const DAppSandbox: React.FC = () => {
   const [currentPreview, setCurrentPreview] = useState<DecodedTransactionPreview | null>(null);
   const [outputLog, setOutputLog] = useState<string>('Ready for simulation.');
 
-  const sampleDummyDestination = 'GABT54O3L4B52L6U3Y5XZZ7K7U7N7J2G2H3K4L5M6N7P8Q9R0S1T2U3V';
+  // Valid Stellar Ed25519 public key for simulation (USDC issuer on Stellar)
+  const sampleDummyDestination = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
 
   const triggerConnect = () => {
     setCurrentOrigin('https://app.soroswap.finance');
     setActiveModal('connect');
+    setOutputLog('Initiated Connect Request for https://app.soroswap.finance');
   };
 
   const triggerPaymentSign = () => {
-    if (!activeAccount) return;
-    const dummyAccount = new Account(activeAccount.publicKey, '100');
-    const tx = new TransactionBuilder(dummyAccount, {
-      fee: BASE_FEE,
-      networkPassphrase: NETWORKS[preferences.network].networkPassphrase,
-    })
-      .addOperation(
-        Operation.payment({
-          destination: sampleDummyDestination,
-          asset: new Asset('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'),
-          amount: '75.50',
-        })
-      )
-      .setTimeout(30)
-      .build();
+    if (!activeAccount) {
+      setOutputLog('Please unlock or select an active account first.');
+      return;
+    }
+    try {
+      const dummyAccount = new Account(activeAccount.publicKey, '100');
+      const tx = new TransactionBuilder(dummyAccount, {
+        fee: BASE_FEE,
+        networkPassphrase: NETWORKS[preferences.network].networkPassphrase,
+      })
+        .addOperation(
+          Operation.payment({
+            destination: sampleDummyDestination,
+            asset: new Asset('USDC', sampleDummyDestination),
+            amount: '75.50',
+          })
+        )
+        .setTimeout(30)
+        .build();
 
-    const xdr = tx.toXDR();
-    const preview = decodeTransactionXdr(xdr, activeAccount.publicKey, preferences.network);
-    setCurrentOrigin('https://app.soroswap.finance');
-    setCurrentPreview(preview);
-    setActiveModal('sign');
+      const xdr = tx.toXDR();
+      const preview = decodeTransactionXdr(xdr, activeAccount.publicKey, preferences.network);
+      setCurrentOrigin('https://app.soroswap.finance');
+      setCurrentPreview(preview);
+      setActiveModal('sign');
+      setOutputLog('Initiated Payment Sign request (75.50 USDC).');
+    } catch (err: any) {
+      setOutputLog(`Payment build failed: ${err.message}`);
+    }
   };
 
   const triggerHighRiskSign = () => {
-    if (!activeAccount) return;
-    const dummyAccount = new Account(activeAccount.publicKey, '100');
-    const tx = new TransactionBuilder(dummyAccount, {
-      fee: BASE_FEE,
-      networkPassphrase: NETWORKS[preferences.network].networkPassphrase,
-    })
-      .addOperation(
-        Operation.setOptions({
-          signer: {
-            ed25519PublicKey: sampleDummyDestination,
-            weight: 10,
-          },
-        })
-      )
-      .setTimeout(30)
-      .build();
+    if (!activeAccount) {
+      setOutputLog('Please unlock or select an active account first.');
+      return;
+    }
+    try {
+      const dummyAccount = new Account(activeAccount.publicKey, '100');
+      const tx = new TransactionBuilder(dummyAccount, {
+        fee: BASE_FEE,
+        networkPassphrase: NETWORKS[preferences.network].networkPassphrase,
+      })
+        .addOperation(
+          Operation.setOptions({
+            signer: {
+              ed25519PublicKey: sampleDummyDestination,
+              weight: 10,
+            },
+          })
+        )
+        .setTimeout(30)
+        .build();
 
-    const xdr = tx.toXDR();
-    const preview = decodeTransactionXdr(xdr, activeAccount.publicKey, preferences.network);
-    setCurrentOrigin('https://unknown-dex-exploit.xyz');
-    setCurrentPreview(preview);
-    setActiveModal('sign');
+      const xdr = tx.toXDR();
+      const preview = decodeTransactionXdr(xdr, activeAccount.publicKey, preferences.network);
+      setCurrentOrigin('https://unknown-dex-exploit.xyz');
+      setCurrentPreview(preview);
+      setActiveModal('sign');
+      setOutputLog('Initiated High-Risk Security Settings Sign request.');
+    } catch (err: any) {
+      setOutputLog(`High-risk build failed: ${err.message}`);
+    }
   };
 
   const handleApproveConnect = async (sharedKey: string) => {
