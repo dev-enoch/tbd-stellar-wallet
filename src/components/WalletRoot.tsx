@@ -13,6 +13,7 @@ import { ManageAssetsScreen } from './assets/ManageAssetsScreen';
 import { SwapScreen } from './swap/SwapScreen';
 import { HistoryScreen } from './history/HistoryScreen';
 import { AssetDetailScreen } from './portfolio/AssetDetailScreen';
+import { DAppSandbox } from './dapp/DAppSandbox';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { Sun, Moon, Globe, Lock } from 'lucide-react';
 
@@ -72,7 +73,7 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
         </header>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: isPopup ? '100%' : 'calc(100vh - 60px)', padding: isPopup ? '0' : '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: isPopup ? 'center' : 'flex-start', flexWrap: 'wrap', gap: '32px', minHeight: isPopup ? '100%' : 'calc(100vh - 60px)', padding: isPopup ? '0' : '32px 20px' }}>
         <div className={containerClass} style={{ height: '600px', borderRadius: isPopup ? 0 : 'var(--radius-lg)' }}>
           {/* Extension internal top header */}
           {isPopup && (
@@ -171,6 +172,12 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
             onClose={() => setIsAccountModalOpen(false)}
           />
         </div>
+
+        {!isPopup && (
+          <div style={{ flex: 1, maxWidth: '640px', width: '100%' }}>
+            <DAppSandbox />
+          </div>
+        )}
       </div>
     </div>
   );
