@@ -171,7 +171,7 @@ describe('Stellith Relayer & Backend Service', () => {
       expect(res.status).toBe(200);
       expect(res.body.transferServerSep0024).toContain('https://testanchor.stellar.org');
       expect(res.body.currencies).toContain('USDC');
-    });
+    }, 15000);
 
     it('returns an authentic SEP-24 hosted URL without fabricating bank details', async () => {
       const res = await request(app)
@@ -185,6 +185,6 @@ describe('Stellith Relayer & Backend Service', () => {
       expect(res.status).toBe(200);
       expect(res.body.url).toContain('https://testanchor.stellar.org');
       expect(res.body.id).toBeTruthy();
-    });
+    }, 15000);
   });
 });
