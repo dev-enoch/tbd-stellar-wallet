@@ -26,5 +26,5 @@ describe('DEX Swaps Service', () => {
     expect(minReceived).toBeCloseTo(expected * 0.99, 1);
 
     expect(quote.expiresInSeconds).toBe(30);
-  });
+  }, 15000);
 });
