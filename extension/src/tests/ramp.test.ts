@@ -16,10 +16,17 @@ describe('Naira SEP-24 Anchor On/Off Ramp Service (PRD Section 9)', () => {
   });
 
   describe('Anchor Partner Configuration & Quotes', () => {
-    it('provides quotes from all licensed partners (Cowry, Yellow Card, Linker Fi)', () => {
+    it('provides quotes from all evaluated partners with explicit pilot gating', () => {
       const quotes = getRampQuotes('buy', 50000);
       expect(quotes.length).toBe(RAMP_PARTNERS.length);
       expect(quotes.length).toBeGreaterThanOrEqual(2);
+
+      // Verify pilot gate: sandbox anchor is approved; unexecuted candidates are gated
+      const approvedQuotes = quotes.filter((q) => q.isPilotApproved);
+      const gatedQuotes = quotes.filter((q) => !q.isPilotApproved);
+
+      expect(approvedQuotes.length).toBeGreaterThanOrEqual(1);
+      expect(gatedQuotes.length).toBeGreaterThanOrEqual(1);
 
       quotes.forEach((q) => {
         expect(q.partnerName).toBeTruthy();
@@ -27,22 +34,13 @@ describe('Naira SEP-24 Anchor On/Off Ramp Service (PRD Section 9)', () => {
         expect(q.rateNgnPerUsdc).toBeGreaterThan(0);
         expect(q.cryptoAmountUsdc).toBeGreaterThan(0);
         expect(q.feeNgn).toBeGreaterThan(0);
-        expect(q.isLicensed).toBe(true);
+        expect(q.interactiveUrl).toContain(q.domain);
       });
     });
 
-    it('sorts quotes by best user outcome (highest crypto received for buy)', () => {
+    it('prioritizes pilot approved partners and then best user outcome', () => {
       const buyQuotes = getRampQuotes('buy', 100000);
-      for (let i = 0; i < buyQuotes.length - 1; i++) {
-        expect(buyQuotes[i].cryptoAmountUsdc).toBeGreaterThanOrEqual(buyQuotes[i + 1].cryptoAmountUsdc);
-      }
-    });
-
-    it('sorts quotes by best user outcome (lowest fees for sell)', () => {
-      const sellQuotes = getRampQuotes('sell', 100000);
-      for (let i = 0; i < sellQuotes.length - 1; i++) {
-        expect(sellQuotes[i].feeNgn).toBeLessThanOrEqual(sellQuotes[i + 1].feeNgn);
-      }
+      expect(buyQuotes[0].isPilotApproved).toBe(true);
     });
 
     it('accurately calculates partner percentage fees', () => {
@@ -60,7 +58,7 @@ describe('Naira SEP-24 Anchor On/Off Ramp Service (PRD Section 9)', () => {
   });
 
   describe('Transaction Lifecycle & Fraud Disclosures (PRD Section 9)', () => {
-    it('initiates a ramp transaction with verified domain and virtual bank instructions', () => {
+    it('initiates an authentic SEP-24 session without generating fabricated bank details', () => {
       const quotes = getRampQuotes('buy', 30000);
       const selectedQuote = quotes[0];
       const userAddress = 'GDJLFK5PMOW6LHG4MWJ5PCDEAY2S7LALMQN5CXB2U75727O5R7B5QG6J';
@@ -71,11 +69,13 @@ describe('Naira SEP-24 Anchor On/Off Ramp Service (PRD Section 9)', () => {
       });
 
       expect(tx.id).toMatch(/^ramp_/);
-      expect(tx.status).toBe('waiting_for_payment');
+      expect(tx.status).toBe('pending_user_transfer_start');
       expect(tx.domain).toBe(selectedQuote.domain);
-      expect(tx.depositInstructions).toBeDefined();
-      expect(tx.depositInstructions?.accountNumber).toMatch(/^\d{10}$/);
-      expect(tx.depositInstructions?.referenceCode).toMatch(/^STL-\d{6}$/);
+      expect(tx.interactiveUrl).toContain(selectedQuote.domain);
+      expect(tx.interactiveUrl).toContain('sep24/interactive');
+
+      // The wallet MUST NOT invent bank account numbers or fake bank names
+      expect((tx as any).depositInstructions).toBeUndefined();
 
       const stored = getStoredRampTransactions();
       expect(stored.some((t) => t.id === tx.id)).toBe(true);
@@ -96,10 +96,9 @@ describe('Naira SEP-24 Anchor On/Off Ramp Service (PRD Section 9)', () => {
       expect(reloaded?.status).toBe('completed');
     });
 
-    it('includes plain-language referral disclosure and SEC licensing info', () => {
+    it('includes plain-language referral disclosure and honest pilot agreement status', () => {
       const quote = getRampQuotes('buy', 50000)[0];
-      expect(quote.referralDisclosure).toMatch(/referral/i);
-      expect(quote.isLicensed).toBe(true);
+      expect(quote.referralDisclosure).toBeTruthy();
     });
   });
 });

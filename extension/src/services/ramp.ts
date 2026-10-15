@@ -1,7 +1,9 @@
 export type RampType = 'buy' | 'sell';
 export type RampStatus =
-  | 'pending'
+  | 'pending_user_transfer_start'
   | 'waiting_for_payment'
+  | 'pending_anchor'
+  | 'pending_stellar'
   | 'completed'
   | 'failed'
   | 'refunded';
@@ -10,7 +12,7 @@ export interface RampPartner {
   id: string;
   name: string;
   domain: string;
-  isLicensed: boolean;
+  isPilotApproved: boolean; // Go/No-Go Gate: True only for tested sandbox / executed legal agreements
   licenseDetails: string;
   depositFeePercent: number;
   withdrawalFeePercent: number;
@@ -26,7 +28,7 @@ export interface RampQuote {
   partnerId: string;
   partnerName: string;
   domain: string;
-  isLicensed: boolean;
+  isPilotApproved: boolean;
   type: RampType;
   fiatAmountNgn: number;
   cryptoAmountUsdc: number;
@@ -35,6 +37,7 @@ export interface RampQuote {
   rateNgnPerUsdc: number;
   arrivalMinutes: number;
   referralDisclosure: string;
+  interactiveUrl: string;
 }
 
 export interface RampTransaction {
@@ -54,21 +57,35 @@ export interface RampTransaction {
   updatedAt: number;
   userAddress: string;
   txHash?: string;
-  depositInstructions?: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-    referenceCode: string;
-  };
+  interactiveUrl: string;
 }
 
+/**
+ * Verified candidate anchors directory.
+ * Explicitly states regulatory status per Nigerian SEC ARIP rules and B2B transitions.
+ */
 export const RAMP_PARTNERS: RampPartner[] = [
   {
+    id: 'testanchor',
+    name: 'Stellar Sandbox Anchor (Testnet)',
+    domain: 'testanchor.stellar.org',
+    isPilotApproved: true,
+    licenseDetails: 'Official SDF SEP-24 Reference Implementation & Sandbox',
+    depositFeePercent: 0.1,
+    withdrawalFeePercent: 0.1,
+    rateNgnPerUsdc: 1520,
+    minNgn: 1000,
+    maxNgn: 1000000,
+    estimatedArrivalMinutes: 2,
+    supportEmail: 'support@stellar.org',
+    referralDisclosure: 'Non-commercial reference sandbox. Zero fees collected by Stellith.',
+  },
+  {
     id: 'cowrywise',
-    name: 'Cowry Anchor',
+    name: 'Cowrywise (Evaluation Candidate)',
     domain: 'stellar.cowrywise.com',
-    isLicensed: true,
-    licenseDetails: 'SEC Registered Digital Asset Operator & Fund Manager',
+    isPilotApproved: false,
+    licenseDetails: 'Under ARIP incubation evaluation · Pending executed agreement & counsel opinion',
     depositFeePercent: 0.5,
     withdrawalFeePercent: 0.75,
     rateNgnPerUsdc: 1520,
@@ -76,14 +93,14 @@ export const RAMP_PARTNERS: RampPartner[] = [
     maxNgn: 500000,
     estimatedArrivalMinutes: 10,
     supportEmail: 'support@cowrywise.com',
-    referralDisclosure: 'Stellith receives a 0.1% software maintenance referral fee from Cowry Anchor with zero markup to you.',
+    referralDisclosure: 'No commercial referral agreement active. Referral terms subject to formal partnership.',
   },
   {
     id: 'yellowcard',
-    name: 'Yellow Card Anchor',
+    name: 'Yellow Card (B2B Rails)',
     domain: 'stellar.yellowcard.io',
-    isLicensed: true,
-    licenseDetails: 'Licensed Cross-Border VASP & Licensed Bureau',
+    isPilotApproved: false,
+    licenseDetails: 'Institutional B2B Rails · Retail Trading Discontinued Early 2026',
     depositFeePercent: 0.75,
     withdrawalFeePercent: 0.8,
     rateNgnPerUsdc: 1515,
@@ -91,22 +108,22 @@ export const RAMP_PARTNERS: RampPartner[] = [
     maxNgn: 1000000,
     estimatedArrivalMinutes: 15,
     supportEmail: 'support@yellowcard.io',
-    referralDisclosure: 'Stellith receives a 0.1% ecosystem referral rebate from Yellow Card.',
+    referralDisclosure: 'B2B infrastructure only. Direct retail trading is discontinued.',
   },
   {
-    id: 'linker',
-    name: 'Linker Fi',
+    id: 'linkerfi',
+    name: 'Linker Fi (Candidate Anchor)',
     domain: 'linkerfi.com',
-    isLicensed: true,
-    licenseDetails: 'SEC ARIP Cohort Licensed Digital Asset Adapter',
+    isPilotApproved: false,
+    licenseDetails: 'Under Evaluation · Pending SEC Digital Asset Rules Consultation Review',
     depositFeePercent: 1.0,
     withdrawalFeePercent: 0.9,
     rateNgnPerUsdc: 1525,
     minNgn: 1000,
     maxNgn: 250000,
-    estimatedArrivalMinutes: 3,
+    estimatedArrivalMinutes: 5,
     supportEmail: 'help@linkerfi.com',
-    referralDisclosure: 'Direct open protocol integration with zero referral fee added.',
+    referralDisclosure: 'No commercial referral agreement active during pilot testing.',
   },
 ];
 
@@ -137,7 +154,7 @@ export function saveStoredRampTransactions(txs: RampTransaction[]): void {
 }
 
 /**
- * Calculates quotes across all supported licensed partners for comparison (PRD Section 9).
+ * Calculates quotes across partners for evaluation (PRD Section 9).
  */
 export function getRampQuotes(type: RampType, amountNgn: number): RampQuote[] {
   if (amountNgn <= 0) return [];
@@ -148,12 +165,13 @@ export function getRampQuotes(type: RampType, amountNgn: number): RampQuote[] {
     const feeNgn = (amountNgn * feePct) / 100;
     const netNgn = Math.max(0, amountNgn - feeNgn);
     const cryptoAmountUsdc = netNgn / partner.rateNgnPerUsdc;
+    const txId = `sep24_${Date.now()}_${partner.id}`;
 
     return {
       partnerId: partner.id,
       partnerName: partner.name,
       domain: partner.domain,
-      isLicensed: partner.isLicensed,
+      isPilotApproved: partner.isPilotApproved,
       type,
       fiatAmountNgn: amountNgn,
       cryptoAmountUsdc: parseFloat(cryptoAmountUsdc.toFixed(2)),
@@ -162,9 +180,12 @@ export function getRampQuotes(type: RampType, amountNgn: number): RampQuote[] {
       rateNgnPerUsdc: partner.rateNgnPerUsdc,
       arrivalMinutes: partner.estimatedArrivalMinutes,
       referralDisclosure: partner.referralDisclosure,
+      interactiveUrl: `https://${partner.domain}/sep24/interactive?transaction_id=${txId}&asset_code=USDC`,
     };
   }).sort((a, b) => {
-    // Best quote first: for buy, more USDC is better; for sell, more NGN is better
+    // Prioritize pilot approved partners first, then best rate
+    if (a.isPilotApproved && !b.isPilotApproved) return -1;
+    if (!a.isPilotApproved && b.isPilotApproved) return 1;
     return type === 'buy'
       ? b.netCryptoUsdc - a.netCryptoUsdc
       : a.feeNgn - b.feeNgn;
@@ -172,7 +193,8 @@ export function getRampQuotes(type: RampType, amountNgn: number): RampQuote[] {
 }
 
 /**
- * Initiates an interactive SEP-24 ramp flow with a partner.
+ * Initiates an authentic SEP-24 hosted interactive flow with the partner.
+ * NEVER fabricates payment instructions or bank details.
  */
 export function initiateRampTransaction(params: {
   quote: RampQuote;
@@ -184,7 +206,7 @@ export function initiateRampTransaction(params: {
   const supportEmail = partner?.supportEmail || 'support@anchor.org';
 
   const txId = `ramp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const refCode = `STL-${Math.floor(100000 + Math.random() * 900000)}`;
+  const interactiveUrl = `https://${partnerDomain}/sep24/interactive?transaction_id=${txId}&asset_code=USDC&account=${params.userAddress}`;
 
   const newTx: RampTransaction = {
     id: txId,
@@ -196,21 +218,13 @@ export function initiateRampTransaction(params: {
     cryptoAmountUsdc: params.quote.netCryptoUsdc,
     rateNgn: params.quote.rateNgnPerUsdc,
     feeNgn: params.quote.feeNgn,
-    status: 'waiting_for_payment',
-    statusExplanation:
-      params.quote.type === 'buy'
-        ? `Waiting for your bank transfer to ${partnerName}. Use your unique reference code ${refCode}.`
-        : `Anchor is processing your USDC withdrawal and preparing bank transfer.`,
+    status: 'pending_user_transfer_start',
+    statusExplanation: `Complete your deposit/KYC directly inside ${partnerName}'s verified hosted flow at ${partnerDomain}.`,
     supportEmail,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     userAddress: params.userAddress,
-    depositInstructions: {
-      bankName: 'Providus Bank / Flutterwave Virtual',
-      accountNumber: '9984729103',
-      accountName: `${partnerName} Settlement`,
-      referenceCode: refCode,
-    },
+    interactiveUrl,
   };
 
   const stored = getStoredRampTransactions();
@@ -237,11 +251,11 @@ export function updateRampTransactionStatus(
   if (txHash) tx.txHash = txHash;
 
   if (newStatus === 'completed') {
-    tx.statusExplanation = `Transaction completed successfully. USDC delivered to ${tx.userAddress}.`;
+    tx.statusExplanation = `Transaction completed successfully by ${tx.partnerName}. USDC delivered to ${tx.userAddress}.`;
   } else if (newStatus === 'failed') {
     tx.statusExplanation = `Transaction failed or expired. Please contact ${tx.supportEmail} if funds were debited.`;
   } else if (newStatus === 'refunded') {
-    tx.statusExplanation = `Payment was reversed and refunded to your original bank account.`;
+    tx.statusExplanation = `Payment was reversed and refunded by ${tx.partnerName}.`;
   }
 
   saveStoredRampTransactions(stored);
