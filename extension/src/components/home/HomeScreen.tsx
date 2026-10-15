@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet } from '../../contexts/WalletContext';
 import { useI18n } from '../../contexts/I18nContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   getAccountBalances,
   fundWithFriendbot,
@@ -22,6 +23,11 @@ import {
   Clock,
   Settings as SettingsIcon,
   Home,
+  MoreVertical,
+  Sun,
+  Moon,
+  Globe,
+  Lock,
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -45,8 +51,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenActivity,
   onOpenSettings,
 }) => {
-  const { activeAccount, preferences, updatePreferences } = useWallet();
-  const { t } = useI18n();
+  const { activeAccount, preferences, updatePreferences, lock } = useWallet();
+  const { t, language, setLanguage } = useI18n();
+  const { theme, toggleTheme } = useTheme();
 
   const [balances, setBalances] = useState<AccountBalanceSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -54,6 +61,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
   const [showReserveInfo, setShowReserveInfo] = useState<boolean>(false);
   const [fundingMessage, setFundingMessage] = useState<string>('');
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const portfolio = calculatePortfolioTotal(balances?.assets || [], preferences.currency);
 
@@ -128,23 +151,134 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <ChevronDown size={14} color="var(--text-tertiary)" />
         </button>
 
-        {/* Network Toggle Chip */}
-        <button
-          className={`badge ${preferences.network === 'testnet' ? 'badge-accent' : 'badge-success'}`}
-          onClick={toggleNetwork}
-          title="Click to switch network"
-          style={{ cursor: 'pointer', padding: '3px 8px' }}
-        >
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: 'var(--radius-full)',
-              background: preferences.network === 'testnet' ? 'var(--accent)' : 'var(--success)',
-            }}
-          />
-          <span>{preferences.network === 'testnet' ? 'Testnet' : 'Mainnet'}</span>
-        </button>
+        {/* Right Controls: Network Chip + 3 Vertical Dots Menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }} ref={menuRef}>
+          {/* Network Toggle Chip */}
+          <button
+            className={`badge ${preferences.network === 'testnet' ? 'badge-accent' : 'badge-success'}`}
+            onClick={toggleNetwork}
+            title="Click to switch network"
+            style={{ cursor: 'pointer', padding: '3px 8px' }}
+          >
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: 'var(--radius-full)',
+                background: preferences.network === 'testnet' ? 'var(--accent)' : 'var(--success)',
+              }}
+            />
+            <span>{preferences.network === 'testnet' ? 'Testnet' : 'Mainnet'}</span>
+          </button>
+
+          {/* 3 Vertical Dots Button */}
+          <button
+            className="btn btn-ghost btn-icon"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            title="Options & Settings"
+            style={{ padding: '4px', borderRadius: '6px', color: 'var(--text-secondary)' }}
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          {/* Apple-Style Contextual Popover Dropdown */}
+          {isMenuOpen && (
+            <div className="popover-menu">
+              <div className="popover-section-header">
+                Stellar Network
+              </div>
+
+              {/* Testnet Option */}
+              <div
+                className={`popover-item ${preferences.network === 'testnet' ? 'active' : ''}`}
+                onClick={async () => {
+                  await updatePreferences({ network: 'testnet' });
+                  setIsMenuOpen(false);
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)' }} />
+                  <span>Testnet</span>
+                </div>
+                {preferences.network === 'testnet' && <Check size={14} color="var(--accent)" />}
+              </div>
+
+              {/* Mainnet Option */}
+              <div
+                className={`popover-item ${preferences.network === 'mainnet' ? 'active' : ''}`}
+                onClick={async () => {
+                  await updatePreferences({ network: 'mainnet' });
+                  setIsMenuOpen(false);
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)' }} />
+                  <span>Mainnet</span>
+                </div>
+                {preferences.network === 'mainnet' && <Check size={14} color="var(--accent)" />}
+              </div>
+
+              <div className="popover-divider" />
+
+              {/* Theme Toggle */}
+              <div
+                className="popover-item"
+                onClick={() => {
+                  toggleTheme();
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                  <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                </div>
+              </div>
+
+              {/* Language Toggle */}
+              <div
+                className="popover-item"
+                onClick={() => {
+                  setLanguage(language === 'en' ? 'ha' : 'en');
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Globe size={14} />
+                  <span>Language</span>
+                </div>
+                <span className="font-mono text-muted text-xs">{language.toUpperCase()}</span>
+              </div>
+
+              <div className="popover-divider" />
+
+              {/* Settings */}
+              <div
+                className="popover-item"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenSettings();
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <SettingsIcon size={14} />
+                  <span>{t.settingsTitle}</span>
+                </div>
+              </div>
+
+              {/* Lock Wallet */}
+              <div
+                className="popover-item danger"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  lock();
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Lock size={14} />
+                  <span>{t.lockWallet}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>

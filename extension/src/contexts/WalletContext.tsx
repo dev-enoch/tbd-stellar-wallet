@@ -132,6 +132,17 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     init();
   }, []);
 
+  // Sync active account public key for dApp detection
+  useEffect(() => {
+    const active = accounts[activeAccountIndex];
+    if (active?.publicKey) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ tbd_active_pubkey: active.publicKey });
+      }
+      localStorage.setItem('tbd_active_pubkey', active.publicKey);
+    }
+  }, [accounts, activeAccountIndex]);
+
   // Auto-lock timer
   useEffect(() => {
     if (isLocked || !isInitialized || preferences.autoLockMinutes === 0) return;

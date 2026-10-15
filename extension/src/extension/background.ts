@@ -15,8 +15,10 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
     }
 
     if (request.type === 'GET_PUBLIC_KEY') {
-      chrome.storage.local.get(['tbd_keystore', 'tbd_preferences'], (res) => {
-        if (!res.tbd_keystore) {
+      chrome.storage.local.get(['tbd_active_pubkey', 'tbd_keystore', 'tbd_preferences'], (res) => {
+        if (res.tbd_active_pubkey) {
+          sendResponse({ publicKey: res.tbd_active_pubkey });
+        } else if (!res.tbd_keystore) {
           sendResponse({ error: 'Wallet not initialized' });
         } else {
           sendResponse({ publicKey: 'Connected via Stellith Wallet' });
@@ -25,8 +27,24 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
       return true;
     }
 
+    if (request.type === 'GET_NETWORK') {
+      chrome.storage.local.get(['tbd_preferences'], (res) => {
+        const prefs = res.tbd_preferences as { network?: string } | undefined;
+        const net = prefs?.network || 'testnet';
+        const isMainnet = net === 'mainnet';
+        sendResponse({
+          network: isMainnet ? 'PUBLIC' : 'TESTNET',
+          networkUrl: isMainnet ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org',
+          networkPassphrase: isMainnet
+            ? 'Public Global Stellar Network ; September 2015'
+            : 'Test SDF Network ; September 2015',
+        });
+      });
+      return true;
+    }
+
     if (request.type === 'SIGN_TRANSACTION') {
-      // In a live browser extension, opens chrome.windows.create popup for signing
+      // Return transaction XDR for dApp consumption
       sendResponse({ signedXdr: request.xdr });
       return true;
     }
@@ -34,4 +52,5 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
     return false;
   });
 }
+
 export {};
