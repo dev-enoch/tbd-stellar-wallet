@@ -123,6 +123,12 @@ describe('Settings, Preferences & Vault Security', () => {
     expect(decrypted.mnemonic).toBe(mnemonic);
     expect(decrypted.mnemonic.split(' ').length).toBe(12);
 
+    // Derived private key starts with S and matches derived account
+    const derived = await deriveStellarKeypair(decrypted.mnemonic, 0);
+    expect(derived.secretKey.startsWith('S')).toBe(true);
+    expect(derived.secretKey).toBe(primaryAccount.secretKey);
+    expect(derived.publicKey).toBe(primaryAccount.publicKey);
+
     // Decrypt with wrong password fails
     await expect(decryptVault(encrypted, 'WrongPassword999!')).rejects.toThrow();
   });
