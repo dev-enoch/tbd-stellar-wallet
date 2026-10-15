@@ -48,9 +48,19 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
     <div className={isPopup ? '' : 'wallet-shell'}>
       {!isPopup && (
         <header className="header" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div className="brand">
-            <span style={{ fontSize: '18px', fontWeight: 700 }}>{t.appName}</span>
-            <span className="brand-badge">{t.tbdBadge}</span>
+          <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img
+              src="/Stellith_logo.jpg"
+              alt="Stellith Logo"
+              style={{
+                width: '20px',
+                height: '20px',
+                objectFit: 'contain',
+                borderRadius: '3px',
+                filter: theme === 'dark' ? 'invert(1)' : 'none',
+              }}
+            />
+            <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>{t.appName}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
@@ -79,9 +89,19 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
           {/* Extension internal top header */}
           {isPopup && (
             <div className="header" style={{ padding: '8px 12px' }}>
-              <div className="brand">
-                <span>{t.appName}</span>
-                <span className="brand-badge">{t.tbdBadge}</span>
+              <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <img
+                  src="/Stellith_logo.jpg"
+                  alt="Stellith Logo"
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    objectFit: 'contain',
+                    borderRadius: '3px',
+                    filter: theme === 'dark' ? 'invert(1)' : 'none',
+                  }}
+                />
+                <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '-0.01em' }}>{t.appName}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <button

@@ -164,9 +164,9 @@ export interface Translations {
 
 export const translations: Record<Language, Translations> = {
   en: {
-    appName: "TBD",
+    appName: "Stellith",
     tagline: "A Stellar wallet that explains itself, protects you, and shows what your money is doing.",
-    tbdBadge: "TBD",
+    tbdBadge: "Stellith",
     copied: "Copied!",
     copy: "Copy",
     close: "Close",
@@ -309,13 +309,13 @@ export const translations: Record<Language, Translations> = {
     revealPhrase: "Reveal recovery phrase",
     resetWallet: "Reset wallet",
     resetConfirmWarning: "This will delete all wallet data and keys from this browser. Ensure your recovery phrase is backed up.",
-    aboutTitle: "About TBD",
+    aboutTitle: "About Stellith",
     versionLabel: "Version",
   },
   ha: {
-    appName: "TBD",
+    appName: "Stellith",
     tagline: "Walat ta Stellar mai bayyana kanta, kare ku, da nuna abin da kuɗinku ke yi.",
-    tbdBadge: "TBD",
+    tbdBadge: "Stellith",
     copied: "An kwafa!",
     copy: "Kwafa",
     close: "Rufe",
@@ -458,7 +458,7 @@ export const translations: Record<Language, Translations> = {
     revealPhrase: "Bayyana kalmomin dawowa",
     resetWallet: "Sake saita walat",
     resetConfirmWarning: "Wannan zai goge duk bayanan walat ɗin daga wannan burauzar.",
-    aboutTitle: "Game da TBD",
+    aboutTitle: "Game da Stellith",
     versionLabel: "Sigar",
   },
 };

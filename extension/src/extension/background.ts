@@ -5,7 +5,7 @@
 
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   chrome.runtime.onInstalled.addListener(() => {
-    console.info('TBD Wallet extension service worker initialized.');
+    console.info('Stellith Wallet extension service worker initialized.');
   });
 
   chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -19,7 +19,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
         if (!res.tbd_keystore) {
           sendResponse({ error: 'Wallet not initialized' });
         } else {
-          sendResponse({ publicKey: 'Connected via TBD Wallet' });
+          sendResponse({ publicKey: 'Connected via Stellith Wallet' });
         }
       });
       return true;

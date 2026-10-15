@@ -580,12 +580,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   // --- SUBPAGE: ABOUT & DIAGNOSTICS ---
   const renderAboutSubpage = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+        <img
+          src="/Stellith_logo.jpg"
+          alt="Stellith Logo"
+          style={{
+            width: '48px',
+            height: '48px',
+            objectFit: 'contain',
+            borderRadius: '10px',
+            marginBottom: '8px',
+            filter: theme === 'dark' ? 'invert(1)' : 'none',
+          }}
+        />
+        <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 2px 0' }}>Stellith Wallet</h3>
+        <span className="text-muted text-xs">Version 1.0.0</span>
+      </div>
+
       <div>
         <div className="apple-section-header">APPLICATION INFORMATION</div>
         <div className="apple-group">
           <div className="apple-row" style={{ cursor: 'default' }}>
             <span className="apple-row-title">Application Name</span>
-            <span className="apple-row-value">TBD Wallet</span>
+            <span className="apple-row-value">Stellith Wallet</span>
           </div>
           <div className="apple-row" style={{ cursor: 'default' }}>
             <span className="apple-row-title">Version</span>
@@ -748,7 +765,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <div className="apple-row" onClick={() => setSubpage('about')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span className="apple-icon-chip"><Info size={14} /></span>
-              <span className="apple-row-title">About TBD Wallet</span>
+              <span className="apple-row-title">About Stellith Wallet</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span className="apple-row-value">v1.0.0</span>
@@ -800,7 +817,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       case 'connected':
         return 'Connected dApps';
       case 'about':
-        return 'About TBD';
+        return 'About Stellith';
       default:
         return 'Settings';
     }
