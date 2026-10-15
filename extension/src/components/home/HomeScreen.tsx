@@ -28,6 +28,7 @@ import {
   Moon,
   Globe,
   Lock,
+  TrendingUp,
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -39,6 +40,7 @@ interface HomeScreenProps {
   onOpenAccountSelector: () => void;
   onOpenActivity: () => void;
   onOpenSettings: () => void;
+  onOpenDashboard: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -50,6 +52,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenAccountSelector,
   onOpenActivity,
   onOpenSettings,
+  onOpenDashboard,
 }) => {
   const { activeAccount, preferences, updatePreferences, lock } = useWallet();
   const { t, language, setLanguage } = useI18n();
@@ -249,6 +252,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               <div className="popover-divider" />
 
+              {/* Portfolio Dashboard */}
+              <div
+                className="popover-item"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenDashboard();
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TrendingUp size={14} />
+                  <span>Portfolio Dashboard</span>
+                </div>
+              </div>
+
               {/* Settings */}
               <div
                 className="popover-item"
@@ -363,6 +380,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
             </div>
           )}
+
+          {/* Quick Dashboard link */}
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={onOpenDashboard}
+            style={{
+              margin: '8px auto 0 auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '11px',
+              padding: '2px 10px',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-full)',
+            }}
+          >
+            <TrendingUp size={12} />
+            <span>Open PnL & Orders Dashboard</span>
+          </button>
         </div>
 
         {/* Unfunded Account Banner with Friendbot */}
