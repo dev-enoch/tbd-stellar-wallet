@@ -11,6 +11,7 @@ import {
 import { storage, WalletPreferences } from '../services/storage';
 
 interface WalletContextType {
+  isReady: boolean;
   isInitialized: boolean;
   isLocked: boolean;
   accounts: DerivedAccount[];
@@ -33,6 +34,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [keystore, setKeystore] = useState<EncryptedKeystore | null>(null);
+  const [isReady, setIsReady] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(true);
 
@@ -50,30 +52,83 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const lastActivityRef = useRef<number>(Date.now());
   const cachedPasswordRef = useRef<string | null>(null);
 
-  // Load keystore & prefs on boot
-  useEffect(() => {
-    async function init() {
-      const stored = await storage.getKeystore();
-      const prefs = await storage.getPreferences();
-      setPreferencesState(prefs);
-      if (stored) {
-        setKeystore(stored);
-        setIsInitialized(true);
-        setIsLocked(true);
-      } else {
-        setIsInitialized(false);
-        setIsLocked(false);
-      }
-    }
-    init();
-  }, []);
-
-  // Lock function clears in-memory secrets
+  // Lock function clears in-memory secrets and clears session auth
   const lock = useCallback(() => {
     setMnemonic(null);
     setAccounts([]);
     cachedPasswordRef.current = null;
     setIsLocked(true);
+    storage.clearSessionAuth().catch(() => {});
+  }, []);
+
+  // Load keystore & prefs on boot with session auto-restore
+  useEffect(() => {
+    async function init() {
+      try {
+        const stored = await storage.getKeystore();
+        const prefs = await storage.getPreferences();
+        setPreferencesState(prefs);
+
+        if (stored) {
+          setKeystore(stored);
+          setIsInitialized(true);
+
+          // Check if session auth is valid and not expired
+          const session = await storage.getSessionAuth();
+          if (session && session.password) {
+            const elapsedMinutes = (Date.now() - session.lastActive) / (1000 * 60);
+            if (prefs.autoLockMinutes === 0 || elapsedMinutes < prefs.autoLockMinutes) {
+              try {
+                const vault = await decryptVault(stored, session.password);
+                const derivedAccounts: DerivedAccount[] = [];
+                if (vault.mnemonic.startsWith('imported:')) {
+                  const secret = vault.mnemonic.replace('imported:', '');
+                  const kp = fromSecretKey(secret);
+                  derivedAccounts.push({
+                    index: 0,
+                    name: vault.accounts[0]?.name || 'Imported Account',
+                    publicKey: kp.publicKey(),
+                    secretKey: kp.secret(),
+                    keypair: kp,
+                  });
+                } else {
+                  for (const acc of vault.accounts) {
+                    const derived = await deriveStellarKeypair(vault.mnemonic, acc.index);
+                    derivedAccounts.push({
+                      ...derived,
+                      name: acc.name,
+                    });
+                  }
+                }
+
+                setMnemonic(vault.mnemonic);
+                setAccounts(derivedAccounts);
+                setActiveAccountIndex(vault.activeAccountIndex || 0);
+                cachedPasswordRef.current = session.password;
+                lastActivityRef.current = Date.now();
+                await storage.updateSessionActivity();
+                setIsLocked(false);
+              } catch {
+                await storage.clearSessionAuth();
+                setIsLocked(true);
+              }
+            } else {
+              // Session expired
+              await storage.clearSessionAuth();
+              setIsLocked(true);
+            }
+          } else {
+            setIsLocked(true);
+          }
+        } else {
+          setIsInitialized(false);
+          setIsLocked(false);
+        }
+      } finally {
+        setIsReady(true);
+      }
+    }
+    init();
   }, []);
 
   // Auto-lock timer
@@ -89,6 +144,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const recordActivity = () => {
       lastActivityRef.current = Date.now();
+      storage.updateSessionActivity().catch(() => {});
     };
 
     window.addEventListener('mousemove', recordActivity);
@@ -127,6 +183,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsInitialized(true);
     setIsLocked(false);
     cachedPasswordRef.current = password;
+    await storage.setSessionAuth({ password, lastActive: Date.now() });
   };
 
   const importWallet = async (phrase: string, password: string): Promise<void> => {
@@ -165,6 +222,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsInitialized(true);
     setIsLocked(false);
     cachedPasswordRef.current = password;
+    await storage.setSessionAuth({ password, lastActive: Date.now() });
   };
 
   const unlock = async (password: string): Promise<void> => {
@@ -199,6 +257,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsLocked(false);
     cachedPasswordRef.current = password;
     lastActivityRef.current = Date.now();
+    await storage.setSessionAuth({ password, lastActive: Date.now() });
   };
 
   const addAccount = async (name?: string): Promise<DerivedAccount> => {
@@ -250,6 +309,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const resetWallet = async (): Promise<void> => {
     await storage.removeKeystore();
+    await storage.clearSessionAuth().catch(() => {});
     setKeystore(null);
     setMnemonic(null);
     setAccounts([]);
@@ -268,6 +328,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <WalletContext.Provider
       value={{
+        isReady,
         isInitialized,
         isLocked,
         accounts,
