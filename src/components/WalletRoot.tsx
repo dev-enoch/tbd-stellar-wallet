@@ -9,6 +9,7 @@ import { UnlockScreen } from './auth/UnlockScreen';
 import { HomeScreen } from './home/HomeScreen';
 import { SendScreen } from './send/SendScreen';
 import { ReceiveScreen } from './receive/ReceiveScreen';
+import { ManageAssetsScreen } from './assets/ManageAssetsScreen';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { Sun, Moon, Globe, Lock } from 'lucide-react';
 
@@ -121,6 +122,8 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
             />
           ) : activeView === 'receive' ? (
             <ReceiveScreen onBack={() => setActiveView('home')} />
+          ) : activeView === 'addAsset' ? (
+            <ManageAssetsScreen onBack={() => setActiveView('home')} />
           ) : (
             <HomeScreen
               onSend={() => setActiveView('send')}
