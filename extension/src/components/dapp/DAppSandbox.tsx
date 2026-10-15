@@ -118,14 +118,22 @@ export const DAppSandbox: React.FC = () => {
     setOutputLog(`dApp connection approved for ${currentOrigin}. Shared address: ${sharedKey}`);
   };
 
-  const handleApproveSign = () => {
+  const handleApproveSign = async () => {
     if (!activeAccount || !currentPreview) return;
     try {
-      const signedXdr = signTransactionXdr(
-        currentPreview.rawXdr,
-        activeAccount.keypair,
-        preferences.network
-      );
+      let signedXdr: string;
+      if (activeAccount.signer) {
+        const passphrase = NETWORKS[preferences.network].networkPassphrase;
+        signedXdr = await activeAccount.signer.signTransaction(currentPreview.rawXdr, passphrase);
+      } else if (activeAccount.keypair) {
+        signedXdr = signTransactionXdr(
+          currentPreview.rawXdr,
+          activeAccount.keypair,
+          preferences.network
+        );
+      } else {
+        throw new Error('No signing credentials available for active account');
+      }
       setActiveModal('none');
       setOutputLog(`Transaction successfully signed! Signed XDR:\n${signedXdr}`);
     } catch (err: any) {

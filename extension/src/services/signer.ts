@@ -1,4 +1,5 @@
 import { Keypair, TransactionBuilder } from '@stellar/stellar-sdk';
+import { signWithLedger, verifyAddressOnDevice } from './ledger';
 
 export type SignerType = 'local' | 'ledger' | 'passkey';
 
@@ -68,6 +69,7 @@ export class LedgerSigner implements Signer {
   readonly type: SignerType = 'ledger';
   readonly publicKey: string;
   readonly bipPath: string;
+  allowBlindSigning: boolean;
   readonly capabilities: SignerCapabilities = {
     canSignClassic: true,
     canSignSorobanAuth: false, // Blind signing of contract calls restricted by default
@@ -77,21 +79,20 @@ export class LedgerSigner implements Signer {
     isContractAccount: false,
   };
 
-  constructor(publicKey: string, bipPath: string = "m/44'/148'/0'") {
+  constructor(publicKey: string, bipPath: string = "m/44'/148'/0'", allowBlindSigning: boolean = false) {
     this.publicKey = publicKey;
     this.bipPath = bipPath;
+    this.allowBlindSigning = allowBlindSigning;
   }
 
   async signTransaction(transactionXdr: string, networkPassphrase: string): Promise<string> {
-    // Verifies transaction envelope on hardware screen and signs
-    const tx = TransactionBuilder.fromXDR(transactionXdr, networkPassphrase);
-    // In production WebHID, sends raw APDU to device transport
-    return tx.toXDR();
+    return signWithLedger(transactionXdr, networkPassphrase, this.bipPath, {
+      allowBlindSigning: this.allowBlindSigning,
+    });
   }
 
   async verifyAddressOnDevice(): Promise<boolean> {
-    // Prompts Ledger device to display address for visual verification
-    return true;
+    return verifyAddressOnDevice(this.bipPath, this.publicKey);
   }
 }
 

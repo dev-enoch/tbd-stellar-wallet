@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useWallet } from '../../contexts/WalletContext';
 import { formatAddress } from '../../services/stellar';
-import { Check, Plus, Edit2, X, User } from 'lucide-react';
+import { Check, Plus, Edit2, X, User, Cpu } from 'lucide-react';
+import { LedgerConnectModal } from '../modals/LedgerConnectModal';
 
 interface AccountSelectorModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
   const [newAccountName, setNewAccountName] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -133,6 +135,21 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 600, fontSize: '13px' }}>{acc.name}</span>
+                        {acc.type === 'ledger' && (
+                          <span
+                            style={{
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              padding: '1px 5px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'var(--bg-subtle)',
+                              border: '1px solid var(--border-subtle)',
+                              letterSpacing: '0.5px',
+                            }}
+                          >
+                            HW
+                          </span>
+                        )}
                         <button
                           className="btn btn-ghost btn-icon"
                           style={{ padding: '2px' }}
@@ -160,25 +177,53 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({ isOp
         </div>
 
         {/* Add Account Section */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="text"
-            className="input"
-            placeholder="New account name (optional)"
-            value={newAccountName}
-            onChange={(e) => setNewAccountName(e.target.value)}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              className="input"
+              placeholder="New account name (optional)"
+              value={newAccountName}
+              onChange={(e) => setNewAccountName(e.target.value)}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={handleCreateAccount}
+              disabled={isAdding}
+              style={{ flexShrink: 0 }}
+            >
+              <Plus size={14} />
+              <span>Add Account</span>
+            </button>
+          </div>
+
           <button
-            className="btn btn-secondary"
-            onClick={handleCreateAccount}
-            disabled={isAdding}
-            style={{ flexShrink: 0 }}
+            className="btn btn-ghost"
+            onClick={() => setShowLedgerModal(true)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              border: '1px dashed var(--border-subtle)',
+              padding: '8px',
+              fontSize: '12px',
+            }}
           >
-            <Plus size={14} />
-            <span>Add Account</span>
+            <Cpu size={14} />
+            <span>Connect Hardware Wallet (Ledger)</span>
           </button>
         </div>
       </div>
+
+      <LedgerConnectModal
+        isOpen={showLedgerModal}
+        onClose={() => {
+          setShowLedgerModal(false);
+          onClose();
+        }}
+      />
     </div>
   );
 };

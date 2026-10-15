@@ -8,7 +8,7 @@ import {
   decryptVault,
   fromSecretKey,
 } from '../services/crypto';
-import { LocalKeySigner } from '../services/signer';
+import { LocalKeySigner, LedgerSigner } from '../services/signer';
 import { storage, WalletPreferences } from '../services/storage';
 
 interface WalletContextType {
@@ -26,6 +26,7 @@ interface WalletContextType {
   lock: () => void;
   resetWallet: () => Promise<void>;
   addAccount: (name?: string) => Promise<DerivedAccount>;
+  addLedgerAccount: (publicKey: string, bipPath: string, name?: string) => Promise<DerivedAccount>;
   switchAccount: (index: number) => void;
   revealPhrase: (password: string) => Promise<string>;
   revealPrivateKey: (password: string) => Promise<string>;
@@ -99,11 +100,29 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   });
                 } else {
                   for (const acc of vault.accounts) {
-                    const derived = await deriveStellarKeypair(vault.mnemonic, acc.index);
-                    derivedAccounts.push({
-                      ...derived,
-                      name: acc.name,
-                    });
+                    if (acc.type === 'ledger') {
+                      derivedAccounts.push({
+                        index: acc.index,
+                        name: acc.name,
+                        publicKey: acc.publicKey,
+                        secretKey: '',
+                        type: 'ledger',
+                        bipPath: acc.bipPath || `44'/148'/${acc.index}'`,
+                        signer: new LedgerSigner(
+                          acc.publicKey,
+                          acc.bipPath || `44'/148'/${acc.index}'`,
+                          prefs.allowBlindSigning
+                        ),
+                      });
+                    } else {
+                      const derived = await deriveStellarKeypair(vault.mnemonic, acc.index);
+                      derivedAccounts.push({
+                        ...derived,
+                        name: acc.name,
+                        type: 'local',
+                        signer: new LocalKeySigner(derived.keypair!),
+                      });
+                    }
                   }
                 }
 
@@ -265,11 +284,29 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     } else {
       for (const acc of vault.accounts) {
-        const derived = await deriveStellarKeypair(vault.mnemonic, acc.index);
-        derivedAccounts.push({
-          ...derived,
-          name: acc.name,
-        });
+        if (acc.type === 'ledger') {
+          derivedAccounts.push({
+            index: acc.index,
+            name: acc.name,
+            publicKey: acc.publicKey,
+            secretKey: '',
+            type: 'ledger',
+            bipPath: acc.bipPath || `44'/148'/${acc.index}'`,
+            signer: new LedgerSigner(
+              acc.publicKey,
+              acc.bipPath || `44'/148'/${acc.index}'`,
+              preferences.allowBlindSigning
+            ),
+          });
+        } else {
+          const derived = await deriveStellarKeypair(vault.mnemonic, acc.index);
+          derivedAccounts.push({
+            ...derived,
+            name: acc.name,
+            type: 'local',
+            signer: new LocalKeySigner(derived.keypair!),
+          });
+        }
       }
     }
 
@@ -303,8 +340,53 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           index: a.index,
           name: a.name,
           publicKey: a.publicKey,
+          type: a.type,
+          bipPath: a.bipPath,
         })),
         activeAccountIndex,
+      };
+      const newEncrypted = await encryptVault(updatedVault, cachedPasswordRef.current);
+      await storage.setKeystore(newEncrypted);
+      setKeystore(newEncrypted);
+    }
+
+    return newAccount;
+  };
+
+  const addLedgerAccount = async (
+    publicKey: string,
+    bipPath: string,
+    name?: string
+  ): Promise<DerivedAccount> => {
+    const nextIndex = accounts.length;
+    const accountName = name || `Ledger ${nextIndex + 1}`;
+    const ledgerSigner = new LedgerSigner(publicKey, bipPath, preferences.allowBlindSigning);
+
+    const newAccount: DerivedAccount = {
+      index: nextIndex,
+      name: accountName,
+      publicKey,
+      secretKey: '',
+      type: 'ledger',
+      bipPath,
+      signer: ledgerSigner,
+    };
+
+    const updatedAccounts = [...accounts, newAccount];
+    setAccounts(updatedAccounts);
+    setActiveAccountIndex(updatedAccounts.length - 1);
+
+    if (cachedPasswordRef.current && keystore && mnemonic) {
+      const updatedVault: DecryptedVault = {
+        mnemonic,
+        accounts: updatedAccounts.map((a) => ({
+          index: a.index,
+          name: a.name,
+          publicKey: a.publicKey,
+          type: a.type,
+          bipPath: a.bipPath,
+        })),
+        activeAccountIndex: updatedAccounts.length - 1,
       };
       const newEncrypted = await encryptVault(updatedVault, cachedPasswordRef.current);
       await storage.setKeystore(newEncrypted);
@@ -330,6 +412,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const revealPrivateKey = async (password: string): Promise<string> => {
+    const active = accounts[activeAccountIndex];
+    if (active?.type === 'ledger') {
+      throw new Error(
+        'Ledger hardware wallet keys are secured directly inside your physical device and cannot be revealed or exported.'
+      );
+    }
     if (!keystore) throw new Error('No keystore found');
     const vault = await decryptVault(keystore, password);
     if (vault.mnemonic.startsWith('imported:')) {
@@ -352,7 +440,18 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updatePreferences = async (newPrefs: Partial<WalletPreferences>) => {
     await storage.setPreferences(newPrefs);
-    setPreferencesState((prev) => ({ ...prev, ...newPrefs }));
+    setPreferencesState((prev) => {
+      const next = { ...prev, ...newPrefs };
+      if (newPrefs.allowBlindSigning !== undefined) {
+        // Update any in-memory LedgerSigners
+        accounts.forEach((acc) => {
+          if (acc.signer && acc.signer instanceof LedgerSigner) {
+            acc.signer.allowBlindSigning = next.allowBlindSigning;
+          }
+        });
+      }
+      return next;
+    });
   };
 
   const activeAccount = accounts[activeAccountIndex] || null;
@@ -374,6 +473,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         lock,
         resetWallet,
         addAccount,
+        addLedgerAccount,
         switchAccount,
         revealPhrase,
         revealPrivateKey,

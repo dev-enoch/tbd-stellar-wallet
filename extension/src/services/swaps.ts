@@ -26,7 +26,7 @@ export interface SwapQuote {
 }
 
 export interface SwapParams {
-  keypair: Keypair;
+  keypair?: Keypair;
   quote: SwapQuote;
   network?: NetworkType;
   signer?: Signer;
@@ -147,7 +147,10 @@ export async function executeSwap(params: SwapParams): Promise<{ hash: string; o
   const server = getHorizonServer(network);
   const networkConfig = NETWORKS[network];
 
-  const sourceAccount = await server.loadAccount(params.keypair.publicKey());
+  const senderPublicKey = params.signer ? params.signer.publicKey : params.keypair?.publicKey();
+  if (!senderPublicKey) throw new Error('No valid public key or signer provided for swap');
+
+  const sourceAccount = await server.loadAccount(senderPublicKey);
 
   const sendAsset = createAsset(params.quote.fromAssetCode, params.quote.fromAssetIssuer);
   const destAsset = createAsset(params.quote.toAssetCode, params.quote.toAssetIssuer);
@@ -185,7 +188,7 @@ export async function executeSwap(params: SwapParams): Promise<{ hash: string; o
     Operation.pathPaymentStrictSend({
       sendAsset,
       sendAmount: params.quote.sendAmount,
-      destination: params.keypair.publicKey(),
+      destination: senderPublicKey,
       destAsset,
       destMin: params.quote.minimumReceived,
       path: pathAssets,
@@ -205,6 +208,9 @@ export async function executeSwap(params: SwapParams): Promise<{ hash: string; o
     };
   }
 
+  if (!params.keypair) {
+    throw new Error('No local keypair or hardware signer available to sign swap transaction');
+  }
   transaction.sign(params.keypair);
 
   const response = await server.submitTransaction(transaction);
