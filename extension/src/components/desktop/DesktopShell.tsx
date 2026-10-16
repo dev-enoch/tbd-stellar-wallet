@@ -61,7 +61,6 @@ export const DesktopShell: React.FC = () => {
 
   // UI Interactive State
   const [chartAsset, setChartAsset] = useState<string>('XLM');
-  const [hoveredPrice, setHoveredPrice] = useState<number | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
   const [showReserveInfo, setShowReserveInfo] = useState<boolean>(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
@@ -461,9 +460,7 @@ export const DesktopShell: React.FC = () => {
               </div>
 
               <div style={{ fontSize: '38px', fontWeight: 800, letterSpacing: '-0.03em', margin: '12px 0 6px 0' }}>
-                {hoveredPrice !== null
-                  ? `${currencyInfo.symbol}${hoveredPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : portfolioSummary.formatted}
+                {portfolioSummary.formatted}
               </div>
 
               {/* Spendable vs Reserved Breakdown */}
@@ -590,7 +587,6 @@ export const DesktopShell: React.FC = () => {
               height={195}
               showTimeframes={true}
               interactive={true}
-              onPriceHover={setHoveredPrice}
             />
           </div>
         </div>
