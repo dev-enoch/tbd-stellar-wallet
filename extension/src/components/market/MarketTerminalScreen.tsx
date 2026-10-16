@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Asset } from '@stellar/stellar-sdk';
 import { useWallet } from '../../contexts/WalletContext';
+import { getHorizonServer } from '../../services/stellar';
+import { getAssetPriceInfo, fetchLiveMarketPrices } from '../../services/market';
 import { PriceChart } from '../common/PriceChart';
 import {
   CandlestickChart,
@@ -11,7 +14,9 @@ import {
 interface MarketPair {
   id: string;
   base: string;
+  baseIssuer?: string;
   counter: string;
+  counterIssuer?: string;
   price: string;
   change24h: string;
   isPositive: boolean;
@@ -20,74 +25,165 @@ interface MarketPair {
   volume24h: string;
 }
 
-const MARKET_PAIRS: MarketPair[] = [
+const DEFAULT_PAIRS: MarketPair[] = [
   {
     id: 'xlm-usdc',
     base: 'XLM',
     counter: 'USDC',
-    price: '0.1342',
-    change24h: '+3.45%',
+    price: '0.00',
+    change24h: '0.00%',
     isPositive: true,
-    high24h: '0.1388',
-    low24h: '0.1290',
-    volume24h: '$3,842,190',
+    high24h: '0.00',
+    low24h: '0.00',
+    volume24h: '$0.00',
   },
   {
     id: 'aqua-xlm',
     base: 'AQUA',
     counter: 'XLM',
-    price: '0.0078',
-    change24h: '-1.12%',
-    isPositive: false,
-    high24h: '0.0082',
-    low24h: '0.0075',
-    volume24h: '$840,400',
+    price: '0.00',
+    change24h: '0.00%',
+    isPositive: true,
+    high24h: '0.00',
+    low24h: '0.00',
+    volume24h: '$0.00',
   },
   {
     id: 'eurc-usdc',
     base: 'EURC',
     counter: 'USDC',
-    price: '1.0820',
-    change24h: '+0.15%',
+    price: '0.00',
+    change24h: '0.00%',
     isPositive: true,
-    high24h: '1.0850',
-    low24h: '1.0790',
-    volume24h: '$1,290,000',
+    high24h: '0.00',
+    low24h: '0.00',
+    volume24h: '$0.00',
   },
   {
     id: 'btc-usdc',
     base: 'BTC',
     counter: 'USDC',
-    price: '67,420.00',
-    change24h: '+2.80%',
+    price: '0.00',
+    change24h: '0.00%',
     isPositive: true,
-    high24h: '68,100.00',
-    low24h: '65,900.00',
-    volume24h: '$9,140,500',
+    high24h: '0.00',
+    low24h: '0.00',
+    volume24h: '$0.00',
   },
-];
-
-const MOCK_ORDERBOOK_ASKS = [
-  { price: '0.1348', amount: '24,500', total: '3,302.60', depth: 85 },
-  { price: '0.1346', amount: '18,200', total: '2,449.72', depth: 68 },
-  { price: '0.1345', amount: '42,000', total: '5,649.00', depth: 95 },
-  { price: '0.1344', amount: '12,900', total: '1,733.76', depth: 42 },
-  { price: '0.1343', amount: '35,100', total: '4,713.93', depth: 78 },
-];
-
-const MOCK_ORDERBOOK_BIDS = [
-  { price: '0.1341', amount: '31,000', total: '4,157.10', depth: 80 },
-  { price: '0.1340', amount: '54,200', total: '7,262.80', depth: 100 },
-  { price: '0.1338', amount: '22,400', total: '2,997.12', depth: 55 },
-  { price: '0.1335', amount: '16,800', total: '2,242.80', depth: 40 },
-  { price: '0.1332', amount: '48,000', total: '6,393.60', depth: 88 },
 ];
 
 export const MarketTerminalScreen: React.FC = () => {
   const { preferences } = useWallet();
-  const [selectedPair, setSelectedPair] = useState<MarketPair>(MARKET_PAIRS[0]);
+  const [pairs, setPairs] = useState<MarketPair[]>(DEFAULT_PAIRS);
+  const [selectedPair, setSelectedPair] = useState<MarketPair>(DEFAULT_PAIRS[0]);
   const [orderSide, setOrderSide] = useState<'buy' | 'sell'>('buy');
   const [notifySubscribed, setNotifySubscribed] = useState(false);
+
+  const [orderbook, setOrderbook] = useState<{
+    asks: Array<{ price: string; amount: string; total: string; depth: number }>;
+    bids: Array<{ price: string; amount: string; total: string; depth: number }>;
+    spread: string;
+  }>({ asks: [], bids: [], spread: '0.00' });
+
+  // Fetch live SDEX orderbook and market pair quotes
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMarketData = async () => {
+      try {
+        const livePrices = await fetchLiveMarketPrices();
+        if (cancelled) return;
+
+        setPairs((prev) =>
+          prev.map((p) => {
+            const info = livePrices[p.base] || getAssetPriceInfo(p.base);
+            const priceVal = info?.priceInUsd || 0;
+            const changeVal = info?.change24h || 0;
+            return {
+              ...p,
+              price: priceVal > 0 ? priceVal.toFixed(4) : '0.00',
+              change24h: `${changeVal >= 0 ? '+' : ''}${changeVal.toFixed(2)}%`,
+              isPositive: changeVal >= 0,
+            };
+          })
+        );
+
+        const server = getHorizonServer(preferences.network);
+        const usdcIssuer = preferences.network === 'mainnet'
+          ? 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
+          : 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+        const baseAsset = selectedPair.base === 'XLM' ? Asset.native() : new Asset(selectedPair.base, selectedPair.baseIssuer || usdcIssuer);
+        const counterAsset = selectedPair.counter === 'XLM' ? Asset.native() : new Asset(selectedPair.counter, selectedPair.counterIssuer || usdcIssuer);
+
+        const [ob, agg] = await Promise.all([
+          server.orderbook(baseAsset, counterAsset).limit(5).call().catch(() => null),
+          server.tradeAggregation(baseAsset, counterAsset, Date.now() - 86400000, Date.now(), 86400000, 0).limit(1).call().catch(() => null),
+        ]);
+
+        if (cancelled) return;
+
+        if (ob) {
+          const asks = (ob.asks || []).map((a: any) => {
+            const priceNum = parseFloat(a.price);
+            const amtNum = parseFloat(a.amount);
+            return {
+              price: priceNum.toFixed(4),
+              amount: amtNum.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+              total: (priceNum * amtNum).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+              depth: Math.min(100, Math.max(15, Math.round((amtNum / 1000) * 10))),
+            };
+          });
+
+          const bids = (ob.bids || []).map((b: any) => {
+            const priceNum = parseFloat(b.price);
+            const amtNum = parseFloat(b.amount);
+            return {
+              price: priceNum.toFixed(4),
+              amount: amtNum.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+              total: (priceNum * amtNum).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+              depth: Math.min(100, Math.max(15, Math.round((amtNum / 1000) * 10))),
+            };
+          });
+
+          let spread = '0.00';
+          if (asks.length > 0 && bids.length > 0) {
+            spread = `${Math.abs(parseFloat(asks[0].price) - parseFloat(bids[0].price)).toFixed(4)} ${selectedPair.counter}`;
+          }
+
+          setOrderbook({ asks, bids, spread });
+        } else {
+          setOrderbook({ asks: [], bids: [], spread: '0.00' });
+        }
+
+        if (agg && agg.records && agg.records.length > 0) {
+          const r = agg.records[0];
+          setSelectedPair((curr) => ({
+            ...curr,
+            high24h: parseFloat(r.high).toFixed(4),
+            low24h: parseFloat(r.low).toFixed(4),
+            volume24h: `$${parseFloat(r.counter_volume).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+          }));
+        } else {
+          setSelectedPair((curr) => ({
+            ...curr,
+            high24h: '0.00',
+            low24h: '0.00',
+            volume24h: '$0.00',
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          setOrderbook({ asks: [], bids: [], spread: '0.00' });
+        }
+      }
+    };
+
+    loadMarketData();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPair.id, preferences.network]);
 
   return (
     <div
@@ -164,7 +260,7 @@ export const MarketTerminalScreen: React.FC = () => {
           gap: '12px',
         }}
       >
-        {MARKET_PAIRS.map((pair) => {
+        {pairs.map((pair) => {
           const isSelected = selectedPair.id === pair.id;
           return (
             <div
@@ -292,90 +388,99 @@ export const MarketTerminalScreen: React.FC = () => {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: '13px' }}>Orderbook Depth</span>
-            <span className="text-muted text-xs">Spread: 0.0002 USDC</span>
+            <span className="text-muted text-xs">Spread: {orderbook.spread}</span>
           </div>
 
-          {/* Asks (Sells) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: 'var(--text-tertiary)', fontSize: '10px', marginBottom: '2px' }}>
-              <span>Price</span>
-              <span style={{ textAlign: 'right' }}>Amount</span>
-              <span style={{ textAlign: 'right' }}>Total</span>
+          {orderbook.asks.length === 0 && orderbook.bids.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '36px 8px', color: 'var(--text-tertiary)', fontSize: '11.5px' }}>
+              <span>No open orders found on SDEX for this pair</span>
+              <div style={{ fontSize: '10.5px', marginTop: '4px', color: 'var(--text-muted)' }}>Depth: 0 • Defaults to 0</div>
             </div>
-            {MOCK_ORDERBOOK_ASKS.map((ask, idx) => (
+          ) : (
+            <>
+              {/* Asks (Sells) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', color: 'var(--text-tertiary)', fontSize: '10px', marginBottom: '2px' }}>
+                  <span>Price</span>
+                  <span style={{ textAlign: 'right' }}>Amount</span>
+                  <span style={{ textAlign: 'right' }}>Total</span>
+                </div>
+                {orderbook.asks.map((ask, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 1fr',
+                      position: 'relative',
+                      padding: '2px 0',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: `${ask.depth}%`,
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <span style={{ color: 'var(--danger)', fontWeight: 600 }}>{ask.price}</span>
+                    <span style={{ textAlign: 'right' }}>{ask.amount}</span>
+                    <span style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>{ask.total}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mid Market Price */}
               <div
-                key={idx}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  position: 'relative',
-                  padding: '2px 0',
+                  padding: '6px 0',
+                  borderTop: '1px solid var(--border-subtle)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontWeight: 700,
+                  fontSize: '13px',
                 }}
               >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: `${ask.depth}%`,
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <span style={{ color: 'var(--danger)', fontWeight: 600 }}>{ask.price}</span>
-                <span style={{ textAlign: 'right' }}>{ask.amount}</span>
-                <span style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>{ask.total}</span>
+                <span style={{ color: 'var(--success)' }}>${selectedPair.price}</span>
+                <span className="text-muted" style={{ fontSize: '11px' }}>Last Trade</span>
               </div>
-            ))}
-          </div>
 
-          {/* Mid Market Price */}
-          <div
-            style={{
-              padding: '6px 0',
-              borderTop: '1px solid var(--border-subtle)',
-              borderBottom: '1px solid var(--border-subtle)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontWeight: 700,
-              fontSize: '13px',
-            }}
-          >
-            <span style={{ color: 'var(--success)' }}>${selectedPair.price}</span>
-            <span className="text-muted" style={{ fontSize: '11px' }}>Last Trade</span>
-          </div>
-
-          {/* Bids (Buys) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
-            {MOCK_ORDERBOOK_BIDS.map((bid, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  position: 'relative',
-                  padding: '2px 0',
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: `${bid.depth}%`,
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <span style={{ color: 'var(--success)', fontWeight: 600 }}>{bid.price}</span>
-                <span style={{ textAlign: 'right' }}>{bid.amount}</span>
-                <span style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>{bid.total}</span>
+              {/* Bids (Buys) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
+                {orderbook.bids.map((bid, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 1fr',
+                      position: 'relative',
+                      padding: '2px 0',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: `${bid.depth}%`,
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <span style={{ color: 'var(--success)', fontWeight: 600 }}>{bid.price}</span>
+                    <span style={{ textAlign: 'right' }}>{bid.amount}</span>
+                    <span style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>{bid.total}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
 
           {/* Buy/Sell Disabled Action Form */}
           <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>

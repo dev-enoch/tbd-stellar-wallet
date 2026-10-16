@@ -81,10 +81,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Derived metrics
   const { minPrice, maxPrice, endPrice, changePct, isPositive } = useMemo(() => {
     if (!points || points.length === 0) {
-      const base = getAssetPriceInfo(assetCode).priceInUsd;
+      const base = getAssetPriceInfo(assetCode).priceInUsd || 0;
       return {
-        minPrice: base * 0.98,
-        maxPrice: base * 1.02,
+        minPrice: base,
+        maxPrice: base,
         startPrice: base,
         endPrice: base,
         changeAmount: 0,
@@ -298,6 +298,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             }}
           >
             <Loader2 size={18} className="animate-spin text-muted" />
+          </div>
+        )}
+
+        {!isLoading && points.length === 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-tertiary)',
+              fontSize: '12px',
+              gap: '4px',
+              zIndex: 2,
+            }}
+          >
+            <span>No live on-chain trade data found for this pair/timeframe</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Price rate defaults to 0.00</span>
           </div>
         )}
 

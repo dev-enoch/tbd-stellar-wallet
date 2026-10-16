@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { calculatePortfolioTotal, CURRENCY_RATES } from '../services/history';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { calculatePortfolioTotal, CURRENCY_RATES, syncLiveMarketPrices } from '../services/history';
 
 describe('History & Portfolio Service', () => {
+  beforeEach(() => {
+    syncLiveMarketPrices({
+      XLM: { priceInUsd: 0.124, change24h: 3.45 },
+      USDC: { priceInUsd: 1.0, change24h: 0.01 },
+    });
+  });
+
   it('calculates portfolio total in different fiat currencies', () => {
     const balances = [
       { code: 'XLM', balance: '1000' }, // 1000 * 0.124 = $124.00

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Asset } from '@stellar/stellar-sdk';
 import { useWallet } from '../../contexts/WalletContext';
 import { getSwapQuote, executeSwap, SwapQuote } from '../../services/swaps';
-import { getAccountBalances, getExplorerUrl, AccountBalanceSummary } from '../../services/stellar';
+import { getAccountBalances, getExplorerUrl, getHorizonServer, AccountBalanceSummary } from '../../services/stellar';
 import { VERIFIED_ASSETS } from '../../services/trustlines';
 import { getAssetPriceInfo } from '../../services/market';
 import { PriceChart } from '../common/PriceChart';
@@ -47,6 +48,14 @@ export const DesktopSwap: React.FC<DesktopSwapProps> = ({
   const [error, setError] = useState<string>('');
   const [txHash, setTxHash] = useState<string>('');
   const [isInvertedRate, setIsInvertedRate] = useState<boolean>(false);
+
+  // Live on-chain SDEX orderbook and stats
+  const [orderbook, setOrderbook] = useState<{
+    bids: Array<{ price: string; amount: string }>;
+    asks: Array<{ price: string; amount: string }>;
+    spread: string | null;
+  }>({ bids: [], asks: [], spread: null });
+  const [pairStats, setPairStats] = useState<{ high: string; low: string; volume: string } | null>(null);
 
   // Token selector modals
   const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null);
@@ -94,6 +103,72 @@ export const DesktopSwap: React.FC<DesktopSwapProps> = ({
   useEffect(() => {
     loadBalances();
   }, [loadBalances]);
+
+  // Fetch live on-chain SDEX orderbook depth and 24h stats
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchSdexData = async () => {
+      try {
+        const server = getHorizonServer(preferences.network);
+        const fromIss = getIssuer(fromCode);
+        const toIss = getIssuer(toCode);
+        const selling = fromCode === 'XLM' || !fromIss ? Asset.native() : new Asset(fromCode, fromIss);
+        const buying = toCode === 'XLM' || !toIss ? Asset.native() : new Asset(toCode, toIss);
+
+        const [ob, agg] = await Promise.all([
+          server.orderbook(selling, buying).limit(5).call().catch(() => null),
+          server.tradeAggregation(selling, buying, Date.now() - 86400000, Date.now(), 86400000, 0).limit(1).call().catch(() => null),
+        ]);
+
+        if (isCancelled) return;
+
+        if (ob) {
+          const asks = (ob.asks || []).slice(0, 2).map((a: any) => ({
+            price: parseFloat(a.price).toFixed(4),
+            amount: `${parseFloat(a.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${fromCode}`,
+          }));
+          const bids = (ob.bids || []).slice(0, 2).map((b: any) => ({
+            price: parseFloat(b.price).toFixed(4),
+            amount: `${parseFloat(b.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${fromCode}`,
+          }));
+          let spreadStr: string | null = null;
+          if (asks.length > 0 && bids.length > 0) {
+            const spreadVal = Math.abs(parseFloat(asks[0].price) - parseFloat(bids[0].price));
+            const spreadPct = (spreadVal / (parseFloat(asks[0].price) || 1)) * 100;
+            spreadStr = `Spread: ${spreadVal.toFixed(4)} ${toCode} (${spreadPct.toFixed(2)}%)`;
+          }
+          setOrderbook({ bids, asks, spread: spreadStr });
+        } else {
+          setOrderbook({ bids: [], asks: [], spread: null });
+        }
+
+        if (agg && agg.records && agg.records.length > 0) {
+          const r = agg.records[0];
+          setPairStats({
+            high: parseFloat(r.high).toFixed(4),
+            low: parseFloat(r.low).toFixed(4),
+            volume: `$${parseFloat(r.counter_volume).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          });
+        } else {
+          setPairStats({
+            high: '0.0000',
+            low: '0.0000',
+            volume: '$0.00',
+          });
+        }
+      } catch {
+        if (!isCancelled) {
+          setOrderbook({ bids: [], asks: [], spread: null });
+          setPairStats({ high: '0.0000', low: '0.0000', volume: '$0.00' });
+        }
+      }
+    };
+
+    fetchSdexData();
+    return () => {
+      isCancelled = true;
+    };
+  }, [fromCode, toCode, preferences.network, availableTokens]);
 
   // Selected asset balance
   const selectedFromBalance = useMemo(() => {
@@ -678,25 +753,31 @@ export const DesktopSwap: React.FC<DesktopSwapProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700 }}>
                 <TrendingUp size={14} color="var(--accent)" />
-                <span>24h Pair Statistics</span>
+                <span>24h On-Chain Statistics</span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span className="text-secondary">24h High</span>
-                  <span style={{ fontWeight: 600 }}>${(fromPriceUsd * 1.04).toFixed(4)}</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {pairStats && pairStats.high !== '0.0000' ? `$${pairStats.high}` : 'Not found'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span className="text-secondary">24h Low</span>
-                  <span style={{ fontWeight: 600 }}>${(fromPriceUsd * 0.96).toFixed(4)}</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {pairStats && pairStats.low !== '0.0000' ? `$${pairStats.low}` : 'Not found'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-secondary">24h DEX Volume</span>
-                  <span style={{ fontWeight: 600 }}>$1,420,850</span>
+                  <span className="text-secondary">24h SDEX Volume</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {pairStats ? pairStats.volume : '$0.00'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span className="text-secondary">Settlement Time</span>
-                  <span style={{ fontWeight: 600, color: 'var(--success)' }}>≈ 3.8s Finality</span>
+                  <span style={{ fontWeight: 600, color: 'var(--success)' }}>≈ 3.8s Ledger Consensus</span>
                 </div>
               </div>
             </div>
@@ -715,38 +796,43 @@ export const DesktopSwap: React.FC<DesktopSwapProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700 }}>
                 <BarChart2 size={14} color="var(--success)" />
-                <span>SDEX Orderbook Depth</span>
+                <span>Live SDEX Orderbook Depth</span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
-                {/* Asks */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--danger)', fontWeight: 600 }}>0.1264</span>
-                  <span className="text-muted">48,200 XLM</span>
-                  <div style={{ width: '40px', height: '4px', background: 'var(--danger)', opacity: 0.6, borderRadius: '2px' }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--danger)', fontWeight: 600 }}>0.1258</span>
-                  <span className="text-muted">112,500 XLM</span>
-                  <div style={{ width: '65px', height: '4px', background: 'var(--danger)', opacity: 0.8, borderRadius: '2px' }} />
-                </div>
+                {orderbook.asks.length === 0 && orderbook.bids.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '16px 8px', color: 'var(--text-tertiary)', fontSize: '11px' }}>
+                    <span>No active orderbook orders found on SDEX</span>
+                    <div style={{ fontSize: '10px', marginTop: '2px', color: 'var(--text-muted)' }}>Depth: 0 • Default: 0</div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Asks */}
+                    {orderbook.asks.map((ask, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>{ask.price}</span>
+                        <span className="text-muted">{ask.amount}</span>
+                        <div style={{ width: '40px', height: '4px', background: 'var(--danger)', opacity: 0.6, borderRadius: '2px' }} />
+                      </div>
+                    ))}
 
-                {/* Spread */}
-                <div style={{ textAlign: 'center', padding: '2px 0', borderTop: '1px dashed var(--border-subtle)', borderBottom: '1px dashed var(--border-subtle)', color: 'var(--text-tertiary)', fontSize: '10px' }}>
-                  Spread: 0.0002 USDC (0.16%)
-                </div>
+                    {/* Spread */}
+                    {orderbook.spread && (
+                      <div style={{ textAlign: 'center', padding: '2px 0', borderTop: '1px dashed var(--border-subtle)', borderBottom: '1px dashed var(--border-subtle)', color: 'var(--text-tertiary)', fontSize: '10px' }}>
+                        {orderbook.spread}
+                      </div>
+                    )}
 
-                {/* Bids */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>0.1254</span>
-                  <span className="text-muted">95,000 XLM</span>
-                  <div style={{ width: '55px', height: '4px', background: 'var(--success)', opacity: 0.8, borderRadius: '2px' }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>0.1249</span>
-                  <span className="text-muted">180,400 XLM</span>
-                  <div style={{ width: '80px', height: '4px', background: 'var(--success)', opacity: 0.6, borderRadius: '2px' }} />
-                </div>
+                    {/* Bids */}
+                    {orderbook.bids.map((bid, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--success)', fontWeight: 600 }}>{bid.price}</span>
+                        <span className="text-muted">{bid.amount}</span>
+                        <div style={{ width: '55px', height: '4px', background: 'var(--success)', opacity: 0.8, borderRadius: '2px' }} />
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -131,13 +131,16 @@ export async function createPasskeyAccount(nickname: string = 'Passkey Smart Acc
         const rawPub = credential.response?.getPublicKey ? credential.response.getPublicKey() : credential.rawId;
         pubkeyBase64 = Buffer.from(rawPub || credential.rawId).toString('base64');
       }
-    } catch {
-      // Fallback to deterministic simulated credential if user cancels or non-browser env
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError' || err?.message?.toLowerCase().includes('cancel')) {
+        throw new Error('Passkey creation was cancelled by the user.');
+      }
+      throw new Error(err?.message || 'Biometric WebAuthn passkey registration failed.');
     }
   }
 
-  if (!credentialId) {
-    // Generate deterministic simulated passkey for automated testing or mock environments
+  // Node.js test environment fallback where navigator.credentials is absent
+  if (!credentialId && typeof window === 'undefined') {
     const randomBytes = new Uint8Array(16);
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
       crypto.getRandomValues(randomBytes);
@@ -146,6 +149,10 @@ export async function createPasskeyAccount(nickname: string = 'Passkey Smart Acc
     }
     credentialId = `passkey_${Buffer.from(randomBytes).toString('hex')}`;
     pubkeyBase64 = Buffer.from(randomBytes).toString('base64');
+  }
+
+  if (!credentialId) {
+    throw new Error('Passkey could not be created in this environment.');
   }
 
   const contractAddress = derivePasskeyContractAddress(credentialId);

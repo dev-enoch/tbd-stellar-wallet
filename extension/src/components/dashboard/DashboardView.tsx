@@ -121,7 +121,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onBack, isFullTab 
       if (amt <= 0) return;
 
       const code = act.assetCode || 'XLM';
-      const mPrice = MARKET_DATA[code]?.priceInUsd || 0.124;
+      const mPrice = MARKET_DATA[code]?.priceInUsd || 0;
 
       if (act.type === 'receive' || act.type === 'account_created') {
         lots.push({
@@ -140,7 +140,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onBack, isFullTab 
           assetCode: code,
           amount: -amt,
           pricePerUnit: mPrice,
-          fee: 0.00001 * (MARKET_DATA.XLM?.priceInUsd || 0.124),
+          fee: 0.00001 * (MARKET_DATA.XLM?.priceInUsd || 0),
         });
       }
     });

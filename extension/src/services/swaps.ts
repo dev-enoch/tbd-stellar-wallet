@@ -84,7 +84,7 @@ export async function getSwapQuote(
       .call();
 
     if (paths.records && paths.records.length > 0) {
-      // Pick best path (highest destination amount)
+      // Pick best path (highest destination amount) from on-chain SDEX
       const best = paths.records[0];
       expectedOutput = parseFloat(best.destination_amount).toFixed(4);
       if (best.path && best.path.length > 0) {
@@ -95,13 +95,12 @@ export async function getSwapQuote(
         ];
       }
     } else {
-      // Fallback algorithmic market simulation for demonstration on testnet pairs
-      quoteSource = 'aggregator';
-      expectedOutput = calculateFallbackRate(fromCode, toCode, sendAmount);
+      // No live on-chain path/liquidity found
+      expectedOutput = '0';
     }
   } catch {
-    quoteSource = 'aggregator';
-    expectedOutput = calculateFallbackRate(fromCode, toCode, sendAmount);
+    // No path found or ledger query error - default to 0
+    expectedOutput = '0';
   }
 
   const expectedFloat = parseFloat(expectedOutput);
@@ -218,24 +217,4 @@ export async function executeSwap(params: SwapParams): Promise<{ hash: string; o
     hash: response.hash,
     outputAmount: params.quote.expectedOutput,
   };
-}
-
-/**
- * Algorithmic fallback pricing model for pairs without orderbook depth on testnet
- */
-function calculateFallbackRate(from: string, to: string, amountStr: string): string {
-  const amt = parseFloat(amountStr) || 1;
-  const rates: Record<string, number> = {
-    XLM: 0.12,
-    USDC: 1.0,
-    EURC: 1.08,
-    AQUA: 0.0015,
-    yXLM: 0.122,
-  };
-
-  const fromPrice = rates[from] || 1.0;
-  const toPrice = rates[to] || 1.0;
-
-  const out = (amt * fromPrice) / toPrice;
-  return out.toFixed(4);
 }

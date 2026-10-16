@@ -153,6 +153,11 @@ export async function connectLedger(): Promise<LedgerDeviceInfo> {
           status: 'connected',
         };
       }
+
+      throw new LedgerError(
+        'disconnected',
+        'No Ledger hardware device was selected. Connect via USB, unlock with PIN, open Stellar app, and retry.'
+      );
     } catch (err: any) {
       if (err?.name === 'NotAllowedError' || err?.message?.toLowerCase().includes('cancel')) {
         throw new LedgerError('user_rejected', 'Device selection was cancelled.');

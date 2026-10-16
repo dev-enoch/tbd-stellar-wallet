@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAssetPriceInfo, fetchLiveMarketPrices } from '../../services/market';
 import {
   Zap,
   TrendingUp,
@@ -9,6 +10,7 @@ import {
 
 interface PerpMarket {
   symbol: string;
+  assetCode: string;
   underlying: string;
   price: string;
   markPrice: string;
@@ -18,54 +20,83 @@ interface PerpMarket {
   isPositive: boolean;
 }
 
-const PERP_MARKETS: PerpMarket[] = [
+const INITIAL_MARKETS: PerpMarket[] = [
   {
     symbol: 'XLM-PERP',
+    assetCode: 'XLM',
     underlying: 'Stellar Lumens',
-    price: '0.1345',
-    markPrice: '0.1344',
-    fundingRate: '+0.0102% / 8h',
-    volume24h: '$12,450,000',
-    openInterest: '$4,120,000',
+    price: '0.00',
+    markPrice: '0.00',
+    fundingRate: '0.0000% / 8h',
+    volume24h: '$0.00',
+    openInterest: '$0.00',
     isPositive: true,
   },
   {
     symbol: 'BTC-PERP',
+    assetCode: 'BTC',
     underlying: 'Bitcoin',
-    price: '67,420.00',
-    markPrice: '67,415.50',
-    fundingRate: '+0.0084% / 8h',
-    volume24h: '$45,120,000',
-    openInterest: '$18,900,000',
+    price: '0.00',
+    markPrice: '0.00',
+    fundingRate: '0.0000% / 8h',
+    volume24h: '$0.00',
+    openInterest: '$0.00',
     isPositive: true,
   },
   {
     symbol: 'ETH-PERP',
+    assetCode: 'ETH',
     underlying: 'Ethereum',
-    price: '3,520.10',
-    markPrice: '3,519.80',
-    fundingRate: '-0.0021% / 8h',
-    volume24h: '$28,300,000',
-    openInterest: '$9,400,000',
-    isPositive: false,
+    price: '0.00',
+    markPrice: '0.00',
+    fundingRate: '0.0000% / 8h',
+    volume24h: '$0.00',
+    openInterest: '$0.00',
+    isPositive: true,
   },
   {
     symbol: 'AQUA-PERP',
+    assetCode: 'AQUA',
     underlying: 'Aquarius',
-    price: '0.0078',
-    markPrice: '0.0078',
-    fundingRate: '+0.0150% / 8h',
-    volume24h: '$2,140,000',
-    openInterest: '$850,000',
-    isPositive: false,
+    price: '0.00',
+    markPrice: '0.00',
+    fundingRate: '0.0000% / 8h',
+    volume24h: '$0.00',
+    openInterest: '$0.00',
+    isPositive: true,
   },
 ];
 
 export const PerpsScreen: React.FC = () => {
-  const [selectedMarket, setSelectedMarket] = useState<PerpMarket>(PERP_MARKETS[0]);
+  const [markets, setMarkets] = useState<PerpMarket[]>(INITIAL_MARKETS);
+  const [selectedMarket, setSelectedMarket] = useState<PerpMarket>(INITIAL_MARKETS[0]);
   const [positionSide, setPositionSide] = useState<'long' | 'short'>('long');
   const [leverage, setLeverage] = useState<number>(5);
   const [collateralAmount, setCollateralAmount] = useState<string>('100');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLiveMarketPrices().then((prices) => {
+      if (cancelled) return;
+      setMarkets((prev) =>
+        prev.map((m) => {
+          const info = prices[m.assetCode] || getAssetPriceInfo(m.assetCode);
+          const priceVal = info?.priceInUsd || 0;
+          const formatted = priceVal > 0 ? priceVal.toFixed(4) : '0.00';
+          return {
+            ...m,
+            price: formatted,
+            markPrice: formatted,
+            isPositive: (info?.change24h || 0) >= 0,
+          };
+        })
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const collateralNum = parseFloat(collateralAmount) || 0;
   const positionValue = collateralNum * leverage;
@@ -146,7 +177,7 @@ export const PerpsScreen: React.FC = () => {
           gap: '12px',
         }}
       >
-        {PERP_MARKETS.map((market) => {
+        {markets.map((market) => {
           const isSelected = selectedMarket.symbol === market.symbol;
           return (
             <div

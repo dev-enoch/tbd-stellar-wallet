@@ -161,29 +161,29 @@ export interface MarketPriceData {
 
 export const MARKET_DATA: Record<string, MarketPriceData> = {
   XLM: {
-    priceInUsd: 0.124,
-    change24h: 3.45,
-    sparkline: [0.118, 0.119, 0.121, 0.12, 0.123, 0.122, 0.124],
+    priceInUsd: 0,
+    change24h: 0,
+    sparkline: [],
   },
   USDC: {
-    priceInUsd: 1.0,
-    change24h: 0.01,
-    sparkline: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    priceInUsd: 0,
+    change24h: 0,
+    sparkline: [],
   },
   EURC: {
-    priceInUsd: 1.085,
-    change24h: -0.15,
-    sparkline: [1.087, 1.086, 1.085, 1.086, 1.084, 1.085, 1.085],
+    priceInUsd: 0,
+    change24h: 0,
+    sparkline: [],
   },
   AQUA: {
-    priceInUsd: 0.00145,
-    change24h: 4.82,
-    sparkline: [0.00135, 0.00138, 0.00139, 0.00142, 0.00141, 0.00143, 0.00145],
+    priceInUsd: 0,
+    change24h: 0,
+    sparkline: [],
   },
   yXLM: {
-    priceInUsd: 0.1865,
-    change24h: 2.22,
-    sparkline: [0.18, 0.181, 0.183, 0.182, 0.185, 0.184, 0.1865],
+    priceInUsd: 0,
+    change24h: 0,
+    sparkline: [],
   },
 };
 

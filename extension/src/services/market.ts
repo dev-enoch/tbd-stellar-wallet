@@ -1,3 +1,6 @@
+import { Asset } from '@stellar/stellar-sdk';
+import { getHorizonServer } from './stellar';
+
 export interface TokenPriceInfo {
   code: string;
   name: string;
@@ -22,42 +25,42 @@ const COINGECKO_IDS: Record<string, string> = {
   AQUA: 'aqua',
 };
 
-// Fallback baseline prices if offline or initial load
+// Initial baseline prices default to 0 until fetched from live onchain data / market API
 const BASELINE_PRICES: Record<string, TokenPriceInfo> = {
   XLM: {
     code: 'XLM',
     name: 'Stellar Lumens',
-    priceInUsd: 0.184,
-    change24h: 2.18,
-    lastUpdated: Date.now(),
+    priceInUsd: 0,
+    change24h: 0,
+    lastUpdated: 0,
   },
   USDC: {
     code: 'USDC',
     name: 'USD Coin',
-    priceInUsd: 1.0,
-    change24h: 0.01,
-    lastUpdated: Date.now(),
+    priceInUsd: 0,
+    change24h: 0,
+    lastUpdated: 0,
   },
   EURC: {
     code: 'EURC',
     name: 'Euro Coin',
-    priceInUsd: 1.085,
-    change24h: -0.15,
-    lastUpdated: Date.now(),
+    priceInUsd: 0,
+    change24h: 0,
+    lastUpdated: 0,
   },
   AQUA: {
     code: 'AQUA',
     name: 'Aquarius',
-    priceInUsd: 0.00145,
-    change24h: 4.82,
-    lastUpdated: Date.now(),
+    priceInUsd: 0,
+    change24h: 0,
+    lastUpdated: 0,
   },
   yXLM: {
     code: 'yXLM',
     name: 'Ultra Stellar Yield XLM',
-    priceInUsd: 0.186,
-    change24h: 2.22,
-    lastUpdated: Date.now(),
+    priceInUsd: 0,
+    change24h: 0,
+    lastUpdated: 0,
   },
 };
 
@@ -111,8 +114,8 @@ export async function fetchLiveMarketPrices(): Promise<Record<string, TokenPrice
         updated.USDC = {
           code: 'USDC',
           name: 'USD Coin',
-          priceInUsd: data['usd-coin'].usd || 1.0,
-          change24h: data['usd-coin'].usd_24h_change ?? 0.01,
+          priceInUsd: data['usd-coin'].usd || 0,
+          change24h: data['usd-coin'].usd_24h_change ?? 0,
           lastUpdated: Date.now(),
         };
       }
@@ -120,8 +123,8 @@ export async function fetchLiveMarketPrices(): Promise<Record<string, TokenPrice
         updated.EURC = {
           code: 'EURC',
           name: 'Euro Coin',
-          priceInUsd: data['euro-coin'].usd || 1.085,
-          change24h: data['euro-coin'].usd_24h_change ?? 0.0,
+          priceInUsd: data['euro-coin'].usd || 0,
+          change24h: data['euro-coin'].usd_24h_change ?? 0,
           lastUpdated: Date.now(),
         };
       }
@@ -129,13 +132,13 @@ export async function fetchLiveMarketPrices(): Promise<Record<string, TokenPrice
         updated.AQUA = {
           code: 'AQUA',
           name: 'Aquarius',
-          priceInUsd: data.aqua.usd || 0.00145,
-          change24h: data.aqua.usd_24h_change ?? 0.0,
+          priceInUsd: data.aqua.usd || 0,
+          change24h: data.aqua.usd_24h_change ?? 0,
           lastUpdated: Date.now(),
         };
       }
-      // yXLM tracks XLM price with yield premium
-      if (updated.XLM) {
+      // yXLM tracks XLM price with yield premium if XLM price is available
+      if (updated.XLM && updated.XLM.priceInUsd > 0) {
         updated.yXLM = {
           code: 'yXLM',
           name: 'Ultra Stellar Yield XLM',
@@ -168,7 +171,7 @@ export function getAssetPriceInfo(assetCode: string): TokenPriceInfo {
     memoryPrices[assetCode] || {
       code: assetCode,
       name: assetCode,
-      priceInUsd: assetCode === 'USDC' ? 1.0 : 0.0,
+      priceInUsd: 0.0,
       change24h: 0.0,
       lastUpdated: Date.now(),
     }
@@ -221,36 +224,30 @@ export async function fetchHistoricalChartData(
         return points;
       }
     }
-  } catch (err) {
-    console.warn(`Could not fetch live chart data for ${assetCode}, generating interpolated curve:`, err);
+  } catch {
+    // API unavailable, proceed to check on-chain SDEX trade aggregations
   }
 
-  // Graceful fallback: construct authentic historical trend curve around live current price
-  const basePrice = getAssetPriceInfo(assetCode).priceInUsd || 0.184;
-  const numPoints = days === 1 ? 24 : days === 7 ? 42 : days === 30 ? 60 : 90;
-  const stepMs = (days * 24 * 60 * 60 * 1000) / numPoints;
-  const startTime = now - days * 24 * 60 * 60 * 1000;
+  // Attempt live on-chain SDEX trade aggregation from Horizon
+  try {
+    const server = getHorizonServer('testnet');
+    const baseAsset = assetCode === 'XLM' ? Asset.native() : new Asset(assetCode, 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
+    const counterAsset = assetCode === 'USDC' ? Asset.native() : new Asset('USDC', 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
+    const startTime = now - days * 24 * 60 * 60 * 1000;
+    const resolution = days === 1 ? 3600000 : days === 7 ? 14400000 : 86400000;
+    const agg = await server.tradeAggregation(baseAsset, counterAsset, startTime, now, resolution, 0).limit(60).order('asc').call();
 
-  const points: ChartPoint[] = [];
-  let current = basePrice * (1 - (getAssetPriceInfo(assetCode).change24h / 100) * (days / 7));
-
-  for (let i = 0; i <= numPoints; i++) {
-    const t = startTime + i * stepMs;
-    // Natural market-like minor fluctuation targeting current live price at i = numPoints
-    const progress = i / numPoints;
-    const target = basePrice;
-    const wave = Math.sin(i * 0.45) * 0.008 * basePrice + Math.cos(i * 0.2) * 0.005 * basePrice;
-    const price = current + (target - current) * progress + wave;
-    points.push({
-      timestamp: t,
-      price: Math.max(0.0001, Number(price.toFixed(5))),
-    });
+    if (agg.records && agg.records.length > 0) {
+      const points: ChartPoint[] = agg.records.map((r: any) => ({
+        timestamp: parseInt(r.timestamp, 10),
+        price: parseFloat(r.close),
+      }));
+      return points;
+    }
+  } catch {
+    // No on-chain trade aggregation found
   }
 
-  // Ensure last point matches current price exactly
-  if (points.length > 0) {
-    points[points.length - 1].price = basePrice;
-  }
-
-  return points;
+  // If live on-chain and market data is not available, return empty points (default 0 / not found)
+  return [];
 }

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWallet } from '../../contexts/WalletContext';
-import { formatAddress } from '../../services/stellar';
+import { formatAddress, getHorizonServer } from '../../services/stellar';
 import {
   Sparkles,
   Search,
@@ -10,6 +10,7 @@ import {
   X,
   Layers,
   ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 
 export interface StellarNft {
@@ -26,78 +27,6 @@ export interface StellarNft {
   mintDate: string;
 }
 
-const SAMPLE_STELLAR_NFTS: StellarNft[] = [
-  {
-    id: 'lum-042',
-    name: 'Lumenth Genesis #042',
-    collection: 'Lumenth Explorers',
-    imageUrl: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=500&auto=format&fit=crop&q=80',
-    code: 'LUM042',
-    issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
-    description: 'First generation cybernetic explorer minted on the Stellar network following the SEP-0027 NFT standard.',
-    rarity: 'Legendary',
-    category: 'art',
-    mintDate: '2024-03-12',
-    attributes: [
-      { trait: 'Background', value: 'Deep Cosmos Nebula' },
-      { trait: 'Suit', value: 'Quantum Exo-Plating' },
-      { trait: 'Visor', value: 'Prismatic Stellar Wave' },
-      { trait: 'Affiliation', value: 'Lumens Consortium' },
-    ],
-  },
-  {
-    id: 'aqua-vip',
-    name: 'AQUA Whale VIP Pass #007',
-    collection: 'Aquarius Guild Passes',
-    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80',
-    code: 'AQUAVIP',
-    issuer: 'GBNZILSTVQZ4RWOF99E2DUMMYISSUERFORTESTNETDEMO0011223344',
-    description: 'Exclusive governance & fee rebate tier membership pass for top liquidity providers on the Stellar DEX.',
-    rarity: 'Rare',
-    category: 'pass',
-    mintDate: '2024-06-20',
-    attributes: [
-      { trait: 'Tier', value: 'Whale Diamond' },
-      { trait: 'Fee Rebate', value: '25% Boost' },
-      { trait: 'Voting Weight', value: '3.5x Multiplier' },
-    ],
-  },
-  {
-    id: 'soroban-108',
-    name: 'Soroban Pioneer Badge #108',
-    collection: 'Soroban Smart Contract Pioneers',
-    imageUrl: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=500&auto=format&fit=crop&q=80',
-    code: 'SORO108',
-    issuer: 'GCDNJUBQSX7AJWLJACMJ7I4BC3Z47EXKEVMNOQ7CNKUQLDYZA5D108XX',
-    description: 'Awarded to early smart contract builders and validators deploying Rust contracts to Soroban testnet.',
-    rarity: 'Rare',
-    category: 'badge',
-    mintDate: '2024-08-05',
-    attributes: [
-      { trait: 'Ecosystem', value: 'Soroban Engine' },
-      { trait: 'Contract Ver', value: 'v21.0' },
-      { trait: 'Status', value: 'Verified Creator' },
-    ],
-  },
-  {
-    id: 'stellar-mech',
-    name: 'Stellar Mech Cannoneer #77',
-    collection: 'Galactic Horizon Mechs',
-    imageUrl: 'https://images.unsplash.com/photo-1635322966219-b75ed372eb01?w=500&auto=format&fit=crop&q=80',
-    code: 'MECH77',
-    issuer: 'GCMECH77DUMMYISSUERTESTNETSTELLARHORIZONXLM990011223344',
-    description: 'Battle-hardened mechanized battle unit operational across inter-ledger trade routes.',
-    rarity: 'Uncommon',
-    category: 'gaming',
-    mintDate: '2024-09-18',
-    attributes: [
-      { trait: 'Class', value: 'Heavy Artillery' },
-      { trait: 'Hull Power', value: '9,450 HP' },
-      { trait: 'Weapon', value: 'Plasma Railgun' },
-    ],
-  },
-];
-
 interface NftGalleryScreenProps {
   onBack?: () => void;
   isDesktop?: boolean;
@@ -107,13 +36,72 @@ export const NftGalleryScreen: React.FC<NftGalleryScreenProps> = ({
   onBack,
   isDesktop = false,
 }) => {
-  const { preferences } = useWallet();
+  const { activeAccount, preferences } = useWallet();
+  const [nfts, setNfts] = useState<StellarNft[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedNft, setSelectedNft] = useState<StellarNft | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | 'art' | 'pass' | 'gaming' | 'badge'>('all');
   const [copiedIssuer, setCopiedIssuer] = useState(false);
 
-  const filteredNfts = SAMPLE_STELLAR_NFTS.filter((nft) => {
+  // Fetch live on-chain account NFTs
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchAccountNfts = async () => {
+      if (!activeAccount) return;
+      setIsLoading(true);
+      try {
+        const server = getHorizonServer(preferences.network);
+        const acc = await server.loadAccount(activeAccount.publicKey);
+        if (cancelled) return;
+
+        const nftList: StellarNft[] = [];
+        for (const b of acc.balances) {
+          const anyB = b as any;
+          if (anyB.asset_type !== 'native') {
+            const isNft =
+              anyB.limit === '0.0000001' ||
+              anyB.limit === '1.0000000' ||
+              anyB.limit === '1' ||
+              (parseFloat(anyB.balance) === 1 && anyB.asset_code.length >= 4);
+
+            if (isNft) {
+              nftList.push({
+                id: `${anyB.asset_code}_${anyB.asset_issuer}`,
+                name: `${anyB.asset_code} Collectible`,
+                collection: 'Stellar On-Chain Collectibles',
+                imageUrl: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=500&auto=format&fit=crop&q=80',
+                code: anyB.asset_code,
+                issuer: anyB.asset_issuer,
+                description: `Live on-chain non-fungible asset on Stellar ${preferences.network.toUpperCase()}.`,
+                rarity: 'Rare',
+                category: 'art',
+                mintDate: 'On-Chain',
+                attributes: [
+                  { trait: 'Asset Code', value: anyB.asset_code },
+                  { trait: 'Issuer', value: formatAddress(anyB.asset_issuer, 4) },
+                  { trait: 'Balance', value: anyB.balance },
+                ],
+              });
+            }
+          }
+        }
+        setNfts(nftList);
+      } catch {
+        if (!cancelled) setNfts([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchAccountNfts();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAccount, preferences.network]);
+
+  const filteredNfts = nfts.filter((nft) => {
     const matchesSearch =
       nft.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       nft.collection.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -282,7 +270,12 @@ export const NftGalleryScreen: React.FC<NftGalleryScreenProps> = ({
           padding: isDesktop ? '24px 28px' : '12px',
         }}
       >
-        {filteredNfts.length === 0 ? (
+        {isLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 16px', gap: '10px' }}>
+            <Loader2 size={24} className="animate-spin text-muted" />
+            <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Scanning on-chain ledger balances...</span>
+          </div>
+        ) : filteredNfts.length === 0 ? (
           <div
             style={{
               display: 'flex',
