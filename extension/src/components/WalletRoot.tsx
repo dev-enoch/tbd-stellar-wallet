@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
+import { storage } from '../services/storage';
 import { WelcomeScreen } from './onboarding/WelcomeScreen';
 import { CreateWalletScreen } from './onboarding/CreateWalletScreen';
 import { ImportWalletScreen } from './onboarding/ImportWalletScreen';
@@ -50,6 +51,24 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
   const [activeView, setActiveView] = useState<WalletView>('home');
   const [selectedAssetCode, setSelectedAssetCode] = useState<string>('XLM');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  // Restore in-progress send draft if popup was exited and reopened within 30 minutes while unlocked
+  useEffect(() => {
+    if (isPopup && isInitialized && !isLocked) {
+      storage.getSendDraft().then((draft) => {
+        if (draft && Date.now() - draft.updatedAt < 30 * 60 * 1000) {
+          setSelectedAssetCode(draft.assetCode || 'XLM');
+          setActiveView('send');
+        }
+      });
+    }
+  }, [isPopup, isInitialized, isLocked]);
+
+  const handleReturnHome = () => {
+    setActiveView('home');
+    storage.clearSendDraft();
+    storage.setLastActiveView('home');
+  };
 
   // 1. FULL DESKTOP BROWSER TAB MODE (index.html)
   if (!isPopup) {
@@ -102,8 +121,8 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
         ) : activeView === 'send' ? (
           <SendScreen
             initialAssetCode={selectedAssetCode}
-            onBack={() => setActiveView('home')}
-            onSuccess={() => setActiveView('home')}
+            onBack={handleReturnHome}
+            onSuccess={handleReturnHome}
           />
         ) : activeView === 'receive' ? (
           <ReceiveScreen onBack={() => setActiveView('home')} />

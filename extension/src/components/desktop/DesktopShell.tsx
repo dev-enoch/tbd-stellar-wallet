@@ -888,7 +888,12 @@ export const DesktopShell: React.FC = () => {
             justifyContent: 'center',
             padding: '20px',
           }}
-          onClick={() => setActiveModal(null)}
+          onClick={() => {
+            // Send and Swap modals only close via close button or transaction completion
+            if (activeModal !== 'send' && activeModal !== 'swap') {
+              setActiveModal(null);
+            }
+          }}
         >
           <div
             style={{

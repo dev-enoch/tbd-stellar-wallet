@@ -21,6 +21,16 @@ export interface SessionAuth {
   lastActive: number;
 }
 
+export interface SendDraft {
+  assetCode: string;
+  amount: string;
+  recipient: string;
+  memoType: 'none' | 'text' | 'id' | 'hash';
+  memoValue: string;
+  stage: 'amount' | 'recipient' | 'confirm';
+  updatedAt: number;
+}
+
 const defaultPreferences: WalletPreferences = {
   network: 'testnet', // Default to testnet for safe exploration as per PRD
   currency: 'USD',
@@ -125,6 +135,73 @@ export const storage = {
     }
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem('tbd_session_auth');
+    }
+  },
+
+  async getSendDraft(): Promise<SendDraft | null> {
+    const KEY = 'tbd_send_draft';
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get([KEY], (res) => {
+          resolve((res[KEY] as SendDraft) || null);
+        });
+      });
+    }
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : null;
+    }
+    return null;
+  },
+
+  async setSendDraft(draft: SendDraft): Promise<void> {
+    const KEY = 'tbd_send_draft';
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ [KEY]: draft }, () => resolve());
+      });
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(KEY, JSON.stringify(draft));
+    }
+  },
+
+  async clearSendDraft(): Promise<void> {
+    const KEY = 'tbd_send_draft';
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.remove([KEY], () => resolve());
+      });
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(KEY);
+    }
+  },
+
+  async getLastActiveView(): Promise<string | null> {
+    const KEY = 'tbd_last_active_view';
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get([KEY], (res) => {
+          resolve((res[KEY] as string) || null);
+        });
+      });
+    }
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(KEY);
+    }
+    return null;
+  },
+
+  async setLastActiveView(view: string): Promise<void> {
+    const KEY = 'tbd_last_active_view';
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ [KEY]: view }, () => resolve());
+      });
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(KEY, view);
     }
   },
 };

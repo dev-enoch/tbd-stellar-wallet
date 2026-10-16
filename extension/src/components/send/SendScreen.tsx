@@ -17,6 +17,7 @@ import {
 import { scanTransaction, ScanResult } from '../../services/scanning';
 import { getAssetPriceInfo } from '../../services/market';
 import { CURRENCY_RATES } from '../../services/history';
+import { storage } from '../../services/storage';
 import {
   ArrowLeft,
   ArrowRight,
@@ -78,6 +79,56 @@ export const SendScreen: React.FC<SendScreenProps> = ({
   const [error, setError] = useState<string>('');
   const [txHash, setTxHash] = useState<string>('');
   const [copiedDest, setCopiedDest] = useState<boolean>(false);
+  const [isDraftRestored, setIsDraftRestored] = useState<boolean>(false);
+
+  // Restore draft on mount if available (< 30 minutes old)
+  useEffect(() => {
+    storage.getSendDraft().then((draft) => {
+      if (draft && Date.now() - draft.updatedAt < 30 * 60 * 1000) {
+        if (!initialAssetCode || initialAssetCode === draft.assetCode) {
+          setAssetCode(draft.assetCode);
+        }
+        setAmount(draft.amount || '');
+        setRecipient(draft.recipient || '');
+        setMemoType(draft.memoType || 'none');
+        setMemoValue(draft.memoValue || '');
+        if (draft.stage) {
+          setStage(draft.stage);
+        }
+        if (draft.amount || draft.recipient) {
+          setIsDraftRestored(true);
+        }
+        if (draft.recipient && isValidAddress(draft.recipient.trim())) {
+          triggerAddressVerification(draft.recipient.trim());
+        }
+      }
+    });
+  }, []);
+
+  // Auto-save draft as user edits
+  useEffect(() => {
+    if (stage !== 'receipt' && (amount || recipient || memoValue)) {
+      storage.setSendDraft({
+        assetCode,
+        amount,
+        recipient,
+        memoType,
+        memoValue,
+        stage,
+        updatedAt: Date.now(),
+      });
+    }
+  }, [assetCode, amount, recipient, memoType, memoValue, stage]);
+
+  const handleDiscardDraft = async () => {
+    await storage.clearSendDraft();
+    setAmount('');
+    setRecipient('');
+    setMemoType('none');
+    setMemoValue('');
+    setStage('amount');
+    setIsDraftRestored(false);
+  };
 
   // Update asset code if initialAssetCode changes
   useEffect(() => {
@@ -284,6 +335,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
       });
 
       setTxHash(res.hash);
+      await storage.clearSendDraft();
       setStage('receipt');
     } catch (err: any) {
       const msg =
@@ -316,16 +368,24 @@ export const SendScreen: React.FC<SendScreenProps> = ({
     }
   };
 
+  // Close handler
+  const handleClose = async () => {
+    await storage.clearSendDraft();
+    onBack();
+  };
+
   // Back button handler
-  const handleBack = () => {
+  const handleBack = async () => {
     setError('');
     if (stage === 'receipt') {
+      await storage.clearSendDraft();
       onSuccess();
     } else if (stage === 'confirm') {
       setStage('recipient');
     } else if (stage === 'recipient') {
       setStage('amount');
     } else {
+      await storage.clearSendDraft();
       onBack();
     }
   };
@@ -369,7 +429,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
         <button
           type="button"
           className="btn btn-ghost btn-icon"
-          onClick={onBack}
+          onClick={handleClose}
           disabled={isSubmitting}
           style={{ padding: '6px' }}
         >
@@ -387,6 +447,39 @@ export const SendScreen: React.FC<SendScreenProps> = ({
           flexDirection: 'column',
         }}
       >
+        {isDraftRestored && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 12px',
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
+              marginBottom: '14px',
+            }}
+          >
+            <span>Draft transfer restored from your previous session</span>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--danger)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '11px',
+              }}
+            >
+              Discard
+            </button>
+          </div>
+        )}
+
         {/* ================= STAGE 1: AMOUNT & ASSET ================= */}
         {stage === 'amount' && (
           <div
