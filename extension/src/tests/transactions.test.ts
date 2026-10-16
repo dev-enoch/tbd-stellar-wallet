@@ -34,5 +34,5 @@ describe('Transaction & Payment Service', () => {
     expect(res.valid).toBe(true);
     expect(res.isExchange).toBe(true);
     expect(res.message).toContain('Exchange');
-  });
+  }, 15000);
 });

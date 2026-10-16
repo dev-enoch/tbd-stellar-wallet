@@ -31,10 +31,11 @@ import {
   TrendingUp,
   Banknote,
   Fingerprint,
+  Maximize2,
 } from 'lucide-react';
 
 interface HomeScreenProps {
-  onSend: () => void;
+  onSend: (code?: string) => void;
   onReceive: () => void;
   onSwap: () => void;
   onAddAsset: () => void;
@@ -68,6 +69,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
   const [showReserveInfo, setShowReserveInfo] = useState<boolean>(false);
   const [fundingMessage, setFundingMessage] = useState<string>('');
+
+  const handleOpenDesktopTab = () => {
+    if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+      chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
+      window.close();
+    } else {
+      window.open('/index.html', '_blank');
+    }
+  };
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +188,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <span>{preferences.network === 'testnet' ? 'Testnet' : 'Mainnet'}</span>
           </button>
 
+          {/* Open Desktop Tab Button */}
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            onClick={handleOpenDesktopTab}
+            title="Open Desktop Dashboard"
+            style={{ padding: '4px', borderRadius: '6px', color: 'var(--text-secondary)' }}
+          >
+            <Maximize2 size={15} />
+          </button>
+
           {/* 3 Vertical Dots Button */}
           <button
             className="btn btn-ghost btn-icon"
@@ -267,6 +288,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <TrendingUp size={14} />
                   <span>Portfolio Dashboard</span>
+                </div>
+              </div>
+
+              {/* Open Desktop Tab */}
+              <div
+                className="popover-item"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleOpenDesktopTab();
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Maximize2 size={14} />
+                  <span>Open Desktop Tab</span>
                 </div>
               </div>
 
@@ -468,7 +503,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* 4 Primary Action Buttons */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-          <button className="btn btn-secondary" onClick={onSend} style={{ flexDirection: 'column', padding: '12px 6px', gap: '6px' }}>
+          <button className="btn btn-secondary" onClick={() => onSend()} style={{ flexDirection: 'column', padding: '12px 6px', gap: '6px' }}>
             <Send size={18} />
             <span style={{ fontSize: '11px', fontWeight: 600 }}>{t.sendAction}</span>
           </button>

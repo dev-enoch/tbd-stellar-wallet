@@ -26,6 +26,8 @@ import {
 } from '../../services/orders';
 import { getAccountBalances, AccountBalanceSummary, formatAddress } from '../../services/stellar';
 import { getAccountActivity, ActivityItem, MARKET_DATA } from '../../services/history';
+import { fetchLiveMarketPrices } from '../../services/market';
+import { PriceChart } from '../common/PriceChart';
 import {
   TrendingUp,
   TrendingDown,
@@ -87,6 +89,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onBack, isFullTab 
         getAccountActivity(activeAccount.publicKey, preferences.network),
         getOpenOffers(activeAccount.publicKey, preferences.network),
       ]);
+      await fetchLiveMarketPrices();
       setBalances(bal);
       setActivity(act);
       setOpenOffers(offers);
@@ -443,6 +446,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onBack, isFullTab 
               <span>Prices unavailable for {pnlSummary.unavailableAssetCodes.join(', ')}</span>
             </div>
           )}
+        </div>
+
+        {/* Real Live Interactive Performance Chart */}
+        <div
+          className="panel"
+          style={{
+            padding: '16px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <PriceChart
+            assetCode="XLM"
+            currency={preferences.currency}
+            height={160}
+            showTimeframes={true}
+            interactive={true}
+          />
         </div>
 
         {/* Tab Switcher */}

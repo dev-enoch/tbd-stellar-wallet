@@ -177,13 +177,13 @@ export const MARKET_DATA: Record<string, MarketPriceData> = {
   },
   AQUA: {
     priceInUsd: 0.00145,
-    change24h: 7.82,
+    change24h: 4.82,
     sparkline: [0.00135, 0.00138, 0.00139, 0.00142, 0.00141, 0.00143, 0.00145],
   },
   yXLM: {
-    priceInUsd: 0.1265,
-    change24h: 3.52,
-    sparkline: [0.12, 0.121, 0.123, 0.122, 0.125, 0.124, 0.1265],
+    priceInUsd: 0.1865,
+    change24h: 2.22,
+    sparkline: [0.18, 0.181, 0.183, 0.182, 0.185, 0.184, 0.1865],
   },
 };
 
@@ -193,6 +193,27 @@ export const CURRENCY_RATES: Record<string, { symbol: string; rateFromUsd: numbe
   NGN: { symbol: '₦', rateFromUsd: 1550.0 },
   GBP: { symbol: '£', rateFromUsd: 0.78 },
 };
+
+/**
+ * Updates MARKET_DATA in-memory from live market fetch.
+ */
+export function syncLiveMarketPrices(livePrices: Record<string, { priceInUsd: number; change24h: number }>) {
+  for (const [code, info] of Object.entries(livePrices)) {
+    if (MARKET_DATA[code]) {
+      MARKET_DATA[code].priceInUsd = info.priceInUsd;
+      MARKET_DATA[code].change24h = info.change24h;
+      if (MARKET_DATA[code].sparkline.length > 0) {
+        MARKET_DATA[code].sparkline[MARKET_DATA[code].sparkline.length - 1] = info.priceInUsd;
+      }
+    } else {
+      MARKET_DATA[code] = {
+        priceInUsd: info.priceInUsd,
+        change24h: info.change24h,
+        sparkline: [info.priceInUsd, info.priceInUsd],
+      };
+    }
+  }
+}
 
 /**
  * Calculates total portfolio fiat value across all held assets.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useWallet } from '../../contexts/WalletContext';
 import { useI18n } from '../../contexts/I18nContext';
 import {
@@ -14,80 +14,68 @@ import {
   verifyDestinationAddress,
   DestinationVerificationResult,
 } from '../../services/transactions';
+import { scanTransaction, ScanResult } from '../../services/scanning';
+import { getAssetPriceInfo } from '../../services/market';
+import { CURRENCY_RATES } from '../../services/history';
 import {
   ArrowLeft,
-  ArrowRight,
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
   Clipboard,
   Send,
   Loader2,
+  ChevronDown,
+  Search,
+  X,
+  ShieldCheck,
   ShieldAlert,
 } from 'lucide-react';
-import { scanTransaction, ScanResult } from '../../services/scanning';
-import { VerdictStrip } from '../security/VerdictStrip';
-import { LedgerSigningModal } from '../security/LedgerSigningModal';
 
 interface SendScreenProps {
   onBack: () => void;
   onSuccess: () => void;
+  initialAssetCode?: string;
 }
 
-type SendStep = 1 | 2 | 3 | 'result';
-
-export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => {
+export const SendScreen: React.FC<SendScreenProps> = ({
+  onBack,
+  onSuccess,
+  initialAssetCode,
+}) => {
   const { activeAccount, preferences } = useWallet();
   const { t } = useI18n();
 
-  // Current Step: 1 (Address), 2 (Amount), 3 (Memo & Review), 'result' (Done)
-  const [step, setStep] = useState<SendStep>(1);
+  // Selected Token (Defaults to passed token or XLM)
+  const [assetCode, setAssetCode] = useState<string>(initialAssetCode || 'XLM');
+  const [isTokenPickerOpen, setIsTokenPickerOpen] = useState<boolean>(false);
+  const [tokenSearchQuery, setTokenSearchQuery] = useState<string>('');
 
-  // Form State
-  const [recipient, setRecipient] = useState('');
-  const [verification, setVerification] = useState<DestinationVerificationResult | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-
-  const [assetCode, setAssetCode] = useState('XLM');
-  const [amount, setAmount] = useState('');
-
+  // Form Fields
+  const [amount, setAmount] = useState<string>('');
+  const [recipient, setRecipient] = useState<string>('');
   const [memoType, setMemoType] = useState<'none' | 'text' | 'id' | 'hash'>('none');
-  const [memoValue, setMemoValue] = useState('');
+  const [memoValue, setMemoValue] = useState<string>('');
+  const [showMemoField, setShowMemoField] = useState<boolean>(false);
 
-  // Async & Error States
+  // Balances & Verification
   const [balances, setBalances] = useState<AccountBalanceSummary | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [txHash, setTxHash] = useState('');
-
-  // Threat Scanning States (PRD Section 4)
+  const [verification, setVerification] = useState<DestinationVerificationResult | null>(null);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [threatOverridden, setThreatOverridden] = useState(false);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
 
-  // Scan transaction before confirmation
+  // Execution states
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [txHash, setTxHash] = useState<string>('');
+
+  // Update asset code if initialAssetCode changes
   useEffect(() => {
-    if (step === 3 && activeAccount && recipient) {
-      let isCancelled = false;
-      setIsScanning(true);
-      setThreatOverridden(false);
-      scanTransaction({
-        destination: recipient.trim(),
-        assetCode,
-        amount,
-        memo: memoValue,
-        enabled: preferences.threatScanningEnabled,
-      }).then((res) => {
-        if (!isCancelled) {
-          setScanResult(res);
-          setIsScanning(false);
-        }
-      });
-      return () => {
-        isCancelled = true;
-      };
+    if (initialAssetCode) {
+      setAssetCode(initialAssetCode);
     }
-  }, [step, recipient, assetCode, amount, memoValue, preferences.threatScanningEnabled, activeAccount]);
+  }, [initialAssetCode]);
 
   // Load balances
   useEffect(() => {
@@ -95,24 +83,39 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
     getAccountBalances(activeAccount.publicKey, preferences.network).then(setBalances);
   }, [activeAccount, preferences.network]);
 
-  const selectedAsset = balances?.assets.find((a) => a.code === assetCode);
-  const maxSpendable =
-    assetCode === 'XLM' ? balances?.spendableXlm || '0.00' : selectedAsset?.balance || '0.00';
+  // Available tokens in wallet
+  const availableTokens = useMemo(() => {
+    if (!balances) return [{ code: 'XLM', balance: '0', issuer: undefined }];
+    return balances.assets;
+  }, [balances]);
 
-  // Handle Pasting Recipient
-  const handlePasteRecipient = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        setRecipient(text.trim());
-        triggerAddressVerification(text.trim());
-      }
-    } catch {
-      // Clipboard access denied
+  // Selected asset object
+  const selectedAsset = useMemo(() => {
+    return availableTokens.find((a) => a.code === assetCode) || availableTokens[0];
+  }, [availableTokens, assetCode]);
+
+  // Max spendable for the chosen token
+  const maxSpendable = useMemo(() => {
+    if (assetCode === 'XLM') {
+      return balances?.spendableXlm || '0.00';
     }
-  };
+    return selectedAsset?.balance || '0.00';
+  }, [assetCode, balances, selectedAsset]);
 
-  // Trigger address verification on change or paste
+  // Live price & conversion
+  const currencyInfo = CURRENCY_RATES[preferences.currency] || CURRENCY_RATES.USD;
+  const tokenPriceUsd = getAssetPriceInfo(assetCode).priceInUsd;
+  const tokenPriceFiat = tokenPriceUsd * currencyInfo.rateFromUsd;
+  const fiatEquivalent = useMemo(() => {
+    const amt = parseFloat(amount) || 0;
+    const total = amt * tokenPriceFiat;
+    return `${currencyInfo.symbol}${total.toLocaleString(undefined, {
+      minimumFractionDigits: total < 0.1 ? 4 : 2,
+      maximumFractionDigits: total < 0.1 ? 4 : 2,
+    })}`;
+  }, [amount, tokenPriceFiat, currencyInfo]);
+
+  // Address Verification
   const triggerAddressVerification = async (addr: string) => {
     const trimmed = addr.trim();
     setError('');
@@ -123,7 +126,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
 
     if (!isValidAddress(trimmed)) {
       setVerification(null);
-      setError(t.invalidAddress || 'Invalid Stellar address');
+      setError(t.invalidAddress || 'Invalid Stellar address (expected G... or M...)');
       return;
     }
 
@@ -137,8 +140,11 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
     try {
       const res = await verifyDestinationAddress(trimmed, preferences.network);
       setVerification(res);
-      if (res.isExchange && memoType === 'none') {
-        setMemoType('id');
+      if (res.isExchange) {
+        setShowMemoField(true);
+        if (memoType === 'none') {
+          setMemoType('id');
+        }
       }
     } catch {
       setVerification(null);
@@ -147,58 +153,96 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
     }
   };
 
-  const handleSetMax = () => {
-    if (assetCode === 'XLM') {
-      const maxFloat = parseFloat(maxSpendable);
-      const safeMax = Math.max(0, maxFloat - 0.0001).toFixed(4);
-      setAmount(safeMax);
-    } else {
-      setAmount(maxSpendable);
+  // Pasting recipient address
+  const handlePasteRecipient = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setRecipient(text.trim());
+        triggerAddressVerification(text.trim());
+      }
+    } catch {
+      // Clipboard denied
     }
   };
 
-  // Step 1 -> Step 2 validation
-  const handleGoToStep2 = () => {
+  // Quick amount percentage shortcuts
+  const handleApplyPercentage = (pct: number) => {
+    const max = parseFloat(maxSpendable);
+    if (isNaN(max) || max <= 0) return;
+
+    if (pct === 100) {
+      if (assetCode === 'XLM') {
+        const safeMax = Math.max(0, max - 0.0001);
+        setAmount(safeMax.toFixed(4));
+      } else {
+        setAmount(max.toString());
+      }
+    } else {
+      const calculated = (max * (pct / 100)).toFixed(4);
+      setAmount(calculated);
+    }
     setError('');
-    if (!recipient.trim() || !isValidAddress(recipient.trim())) {
-      setError(t.invalidAddress || 'Please enter a valid Stellar address.');
+  };
+
+  // Live Threat Scanning
+  useEffect(() => {
+    if (activeAccount && recipient && isValidAddress(recipient.trim())) {
+      let isCancelled = false;
+      setIsScanning(true);
+      scanTransaction({
+        destination: recipient.trim(),
+        assetCode,
+        amount: amount || '1',
+        memo: memoValue,
+        enabled: preferences.threatScanningEnabled,
+      }).then((res) => {
+        if (!isCancelled) {
+          setScanResult(res);
+          setIsScanning(false);
+        }
+      });
+      return () => {
+        isCancelled = true;
+      };
+    } else {
+      setScanResult(null);
+    }
+  }, [recipient, assetCode, amount, memoValue, preferences.threatScanningEnabled, activeAccount]);
+
+  // Submit Payment Handler
+  const handleSendPayment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError('');
+
+    if (!activeAccount) return;
+
+    const trimmedDest = recipient.trim();
+    if (!trimmedDest || !isValidAddress(trimmedDest)) {
+      setError('Please provide a valid Stellar destination address (G... or M...).');
       return;
     }
-    if (recipient.trim() === activeAccount?.publicKey) {
+
+    if (trimmedDest === activeAccount.publicKey) {
       setError('Cannot send payment to your own active account.');
       return;
     }
-    setStep(2);
-  };
 
-  // Step 2 -> Step 3 validation
-  const handleGoToStep3 = () => {
-    setError('');
     const amtFloat = parseFloat(amount);
     if (isNaN(amtFloat) || amtFloat <= 0) {
-      setError('Please enter a valid amount.');
+      setError('Please enter a valid transfer amount greater than 0.');
       return;
     }
+
     if (amtFloat > parseFloat(maxSpendable)) {
-      setError(t.insufficientBalance || 'Insufficient balance.');
+      setError(`Insufficient ${assetCode} balance. You have ${parseFloat(maxSpendable).toLocaleString()} ${assetCode} spendable.`);
       return;
     }
-    // If destination is inactive and sending token other than XLM
-    if (verification && !verification.exists && assetCode !== 'XLM') {
-      setError('Inactive account must first be funded with at least 1 XLM before it can hold tokens.');
-      return;
-    }
-    setStep(3);
-  };
 
-  // Step 3 -> Final Submission
-  const handleConfirmSend = async () => {
-    if (!activeAccount) return;
-    setError('');
-
-    // If exchange requires memo
+    // Exchange Memo Requirement Guard
     if (verification?.isExchange && (memoType === 'none' || !memoValue.trim())) {
-      setError('Exchange memo is required to prevent loss of funds.');
+      setShowMemoField(true);
+      setError('Exchange destination requires a valid Memo/Tag to prevent loss of funds.');
       return;
     }
 
@@ -213,7 +257,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
       const res = await submitPayment({
         keypair: activeAccount.keypair,
         signer: activeAccount.signer,
-        destination: recipient.trim(),
+        destination: trimmedDest,
         assetCode,
         assetIssuer: selectedAsset?.issuer,
         amount,
@@ -223,511 +267,741 @@ export const SendScreen: React.FC<SendScreenProps> = ({ onBack, onSuccess }) => 
       });
 
       setTxHash(res.hash);
-      setStep('result');
     } catch (err: any) {
       const rawMsg =
-        err.response?.data?.extras?.result_codes?.transaction || err.message || 'Payment failed';
-      setError(`Transaction error: ${rawMsg}`);
+        err.response?.data?.extras?.result_codes?.transaction ||
+        err.message ||
+        'Transaction failed on Stellar network';
+      setError(`Payment failed: ${rawMsg}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleBack = () => {
-    setError('');
-    if (step === 3) setStep(2);
-    else if (step === 2) setStep(1);
-    else if (step === 'result') onSuccess();
-    else onBack();
-  };
+  // SUCCESS / CONFIRMATION RECEIPT SCREEN
+  if (txHash) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden',
+          background: 'var(--bg-app)',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px 20px',
+            textAlign: 'center',
+            gap: '16px',
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--success-subtle)',
+              border: '2px solid var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--success)',
+            }}
+          >
+            <CheckCircle2 size={32} />
+          </div>
 
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px 0' }}>Payment Sent!</h2>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
+              {amount} {assetCode}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              {fiatEquivalent}
+            </div>
+          </div>
+
+          {/* Receipt Panel */}
+          <div
+            className="panel"
+            style={{
+              width: '100%',
+              maxWidth: '380px',
+              padding: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              fontSize: '12px',
+              textAlign: 'left',
+              background: 'var(--bg-surface)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span className="text-muted">Recipient:</span>
+              <span className="font-mono" style={{ fontWeight: 600 }}>
+                {formatAddress(recipient.trim(), 6)}
+              </span>
+            </div>
+            {memoValue && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="text-muted">Memo ({memoType}):</span>
+                <span className="font-mono">{memoValue}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span className="text-muted">Network:</span>
+              <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>
+                {preferences.network}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
+              <span className="text-muted">Transaction Hash:</span>
+              <a
+                href={getExplorerUrl('tx', txHash, preferences.network)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <span>{formatAddress(txHash, 4)}</span>
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={onSuccess}
+            style={{ width: '100%', maxWidth: '380px', marginTop: '8px' }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // MAIN SINGLE-SCREEN SEND INTERFACE
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Header - Compact */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+        background: 'var(--bg-app)',
+      }}
+    >
+      {/* Header */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
+          padding: '10px 14px',
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
           flexShrink: 0,
         }}
       >
         <button
+          type="button"
           className="btn btn-ghost btn-icon"
-          onClick={handleBack}
+          onClick={onBack}
           disabled={isSubmitting}
-          style={{ padding: '4px' }}
+          style={{ padding: '6px' }}
         >
           <ArrowLeft size={16} />
         </button>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', fontWeight: 600 }}>{t.sendTitle}</span>
-          {step !== 'result' && (
-            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-              Step {step} of 3
-            </span>
-          )}
-        </div>
+        <span style={{ fontSize: '14px', fontWeight: 700 }}>Send Tokens</span>
         <div style={{ width: '28px' }} />
       </div>
 
-      {/* Step Indicator Bar */}
-      {step !== 'result' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            borderBottom: '1px solid var(--border-subtle)',
-            background: 'var(--bg-app)',
-            flexShrink: 0,
-          }}
-        >
-          {[
-            { num: 1, label: '1. Address' },
-            { num: 2, label: '2. Amount' },
-            { num: 3, label: '3. Memo & Review' },
-          ].map((s) => (
-            <div
-              key={s.num}
-              style={{
-                textAlign: 'center',
-                padding: '6px 2px',
-                fontSize: '11px',
-                fontWeight: step === s.num ? 700 : 500,
-                color: step === s.num ? 'var(--accent)' : 'var(--text-secondary)',
-                borderBottom: step === s.num ? '2px solid var(--accent)' : 'none',
-              }}
-            >
-              {s.label}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Main Content Area */}
+      {/* Main Scrollable Body */}
       <div
         style={{
           flex: 1,
           minHeight: 0,
           overflowY: 'auto',
-          padding: '14px 16px 28px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          gap: '14px',
         }}
       >
-        {/* STEP 1: VERIFY ADDRESS */}
-        {step === 1 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <h2 className="text-base" style={{ marginBottom: '4px' }}>
-                Verify Recipient Address
-              </h2>
-              <p className="text-xs text-muted" style={{ margin: 0, lineHeight: 1.4 }}>
-                Enter the destination G... or M... address. We verify account status and memo requirements.
-              </p>
-            </div>
+        {/* 1. TOKEN SELECTOR CARD (Prominently at the top) */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Select Token to Send
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Spendable: <strong style={{ color: 'var(--text-primary)' }}>{parseFloat(maxSpendable).toLocaleString()} {assetCode}</strong>
+            </span>
+          </div>
 
-            <div className="form-group">
-              <label className="label" htmlFor="recipient">
-                {t.recipientLabel}
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="recipient"
-                  type="text"
-                  className="input font-mono"
-                  style={{ paddingRight: '40px', fontSize: '12px' }}
-                  placeholder="G... or M..."
-                  value={recipient}
-                  onChange={(e) => {
-                    setRecipient(e.target.value);
-                    triggerAddressVerification(e.target.value);
-                  }}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-icon"
-                  onClick={handlePasteRecipient}
-                  title="Paste address"
-                  style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)' }}
-                >
-                  <Clipboard size={14} />
-                </button>
-              </div>
-            </div>
-
-            {/* Verification Status Feedback */}
-            {isVerifying ? (
+          <button
+            type="button"
+            onClick={() => setIsTokenPickerOpen(true)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 12px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-subtle)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  justifyContent: 'center',
+                  fontWeight: 700,
                   fontSize: '12px',
-                  color: 'var(--text-secondary)',
-                  padding: '10px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-subtle)',
                 }}
               >
-                <Loader2 size={14} className="animate-spin" />
-                <span>Verifying address on Stellar network…</span>
+                {assetCode.slice(0, 3)}
               </div>
-            ) : verification ? (
-              <div
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: verification.isExchange
-                    ? 'var(--warning-subtle)'
-                    : 'var(--success-subtle)',
-                  border: `1px solid ${verification.isExchange ? 'var(--warning)' : 'var(--success)'}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600 }}>
-                  {verification.isExchange ? (
-                    <AlertTriangle size={14} color="var(--warning)" />
-                  ) : (
-                    <CheckCircle2 size={14} color="var(--success)" />
-                  )}
-                  <span>
-                    {verification.isExchange ? 'Exchange Account Detected' : 'Valid Stellar Address'}
-                  </span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700 }}>{assetCode}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  {assetCode === 'XLM' ? 'Stellar Lumens (Native)' : 'Custom Asset'} • {currencyInfo.symbol}{tokenPriceFiat.toFixed(tokenPriceFiat < 0.1 ? 4 : 2)}
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
-                  {verification.message}
-                </div>
-              </div>
-            ) : null}
-
-            {error && <div className="input-error-msg">{error}</div>}
-
-            <button
-              type="button"
-              className="btn btn-primary btn-lg"
-              onClick={handleGoToStep2}
-              disabled={!recipient.trim() || !isValidAddress(recipient.trim()) || isVerifying}
-              style={{ marginTop: 'auto', gap: '6px' }}
-            >
-              <span>Continue to Amount</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* STEP 2: CHOOSE AMOUNT & ASSET */}
-        {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <h2 className="text-base" style={{ marginBottom: '4px' }}>
-                Payment Amount
-              </h2>
-              <div className="text-xs text-muted">
-                To: <span className="font-mono">{formatAddress(recipient, 6)}</span>
               </div>
             </div>
-
-            {/* Asset Selector */}
-            <div className="form-group">
-              <label className="label" htmlFor="assetSelect">
-                {t.assetLabel}
-              </label>
-              <select
-                id="assetSelect"
-                className="select"
-                value={assetCode}
-                onChange={(e) => {
-                  setAssetCode(e.target.value);
-                  setAmount('');
-                  setError('');
-                }}
-              >
-                {balances?.assets.map((a) => (
-                  <option key={a.code} value={a.code}>
-                    {a.code} ({parseFloat(a.balance).toLocaleString()} available)
-                  </option>
-                ))}
-              </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '12px', fontWeight: 500 }}>Change</span>
+              <ChevronDown size={14} />
             </div>
+          </button>
+        </div>
 
-            {/* Amount Input */}
-            <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <label className="label" htmlFor="amountInput" style={{ margin: 0 }}>
-                  {t.amountLabel}
-                </label>
-                <div className="text-xs text-muted">
-                  Spendable: <strong>{parseFloat(maxSpendable).toLocaleString()} {assetCode}</strong>
-                </div>
-              </div>
-
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="amountInput"
-                  type="number"
-                  step="any"
-                  className="input"
-                  style={{ fontSize: '16px', fontWeight: 600, paddingRight: '56px' }}
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  autoFocus
-                />
+        {/* 2. AMOUNT INPUT CARD */}
+        <div
+          style={{
+            padding: '14px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
+              Amount
+            </span>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              {[25, 50, 75, 100].map((pct) => (
                 <button
+                  key={pct}
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={handleSetMax}
-                  style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', fontWeight: 600 }}
+                  onClick={() => handleApplyPercentage(pct)}
+                  style={{
+                    padding: '2px 6px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-subtle)',
+                  }}
                 >
-                  MAX
+                  {pct === 100 ? 'MAX' : `${pct}%`}
                 </button>
-              </div>
-            </div>
-
-            {error && <div className="input-error-msg">{error}</div>}
-
-            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => setStep(1)}
-                style={{ flex: 1 }}
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleGoToStep3}
-                disabled={!amount || parseFloat(amount) <= 0}
-                style={{ flex: 2, gap: '6px' }}
-              >
-                <span>Continue to Memo</span>
-                <ArrowRight size={14} />
-              </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* STEP 3: MEMO & REVIEW */}
-        {step === 3 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <h2 className="text-base" style={{ marginBottom: '4px' }}>
-                Memo & Final Review
-              </h2>
-              <p className="text-xs text-muted" style={{ margin: 0 }}>
-                Review transaction details and specify a destination memo if required.
-              </p>
-            </div>
-
-            {/* Security Verdict Strip (PRD Section 4) */}
-            <VerdictStrip
-              scanResult={scanResult}
-              isLoading={isScanning}
-              onOverrideChange={setThreatOverridden}
-              isOverridden={threatOverridden}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input
+              type="number"
+              step="any"
+              className="input"
+              style={{
+                fontSize: '22px',
+                fontWeight: 700,
+                padding: '8px 12px',
+                height: '48px',
+                paddingRight: '64px',
+              }}
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setError('');
+              }}
             />
+            <span
+              style={{
+                position: 'absolute',
+                right: '12px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              {assetCode}
+            </span>
+          </div>
 
-            {/* Exchange Memo Warning */}
-            {verification?.isExchange && (
-              <div
-                style={{
-                  padding: '10px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--warning-subtle)',
-                  border: '1px solid var(--warning)',
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <ShieldAlert size={16} color="var(--warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div style={{ fontSize: '11px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                  <strong>Exchange Memo Required:</strong> This recipient belongs to a known centralized exchange.
-                  You <em>must</em> specify your account ID/tag in the memo below, or your deposit will be lost.
-                </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)' }}>
+            <span>Estimated Value:</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fiatEquivalent}</span>
+          </div>
+        </div>
+
+        {/* 3. RECIPIENT DESTINATION ADDRESS */}
+        <div
+          style={{
+            padding: '14px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>
+              To Address
+            </label>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={handlePasteRecipient}
+              style={{ padding: '2px 6px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}
+            >
+              <Clipboard size={11} />
+              <span>Paste</span>
+            </button>
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              className="input font-mono"
+              style={{ fontSize: '12px', paddingRight: '36px' }}
+              placeholder="G... or M... Stellar address"
+              value={recipient}
+              onChange={(e) => {
+                setRecipient(e.target.value);
+                triggerAddressVerification(e.target.value);
+              }}
+            />
+          </div>
+
+          {/* Inline Live Address Feedback */}
+          {isVerifying ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+              <Loader2 size={12} className="animate-spin" />
+              <span>Verifying address on Stellar network…</span>
+            </div>
+          ) : verification ? (
+            <div
+              style={{
+                padding: '8px 10px',
+                borderRadius: 'var(--radius-sm)',
+                background: verification.isExchange
+                  ? 'var(--warning-subtle)'
+                  : 'var(--success-subtle)',
+                border: `1px solid ${verification.isExchange ? 'var(--warning)' : 'var(--success)'}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                fontSize: '11px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                {verification.isExchange ? (
+                  <AlertTriangle size={13} color="var(--warning)" />
+                ) : (
+                  <CheckCircle2 size={13} color="var(--success)" />
+                )}
+                <span>
+                  {verification.isExchange ? 'Exchange Account Detected' : 'Valid Stellar Address'}
+                </span>
               </div>
-            )}
+              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                {verification.message}
+              </span>
+            </div>
+          ) : null}
+        </div>
 
-            {/* Memo Configuration */}
-            <div className="panel" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="text-xs text-muted" style={{ fontWeight: 600 }}>Memo Type</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {(['none', 'text', 'id', 'hash'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      className={`btn ${memoType === m ? 'btn-primary' : 'btn-ghost'}`}
-                      style={{ padding: '2px 6px', fontSize: '10px', textTransform: 'uppercase' }}
-                      onClick={() => setMemoType(m)}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
+        {/* 4. MEMO (Auto-open or collapsible toggle) */}
+        <div
+          style={{
+            padding: '12px 14px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+            }}
+            onClick={() => setShowMemoField(!showMemoField)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600 }}>Memo / Tag</span>
+              {verification?.isExchange && (
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: '4px',
+                    background: 'var(--warning-subtle)',
+                    color: 'var(--warning)',
+                    border: '1px solid var(--warning)',
+                  }}
+                >
+                  REQUIRED BY EXCHANGE
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '2px 4px', fontSize: '11px' }}
+            >
+              {showMemoField ? 'Hide' : memoValue ? 'Edit Memo' : '+ Add Memo'}
+            </button>
+          </div>
+
+          {showMemoField && (
+            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* Memo Type Selector */}
+              <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-subtle)', padding: '2px', borderRadius: 'var(--radius-sm)' }}>
+                {(['none', 'text', 'id', 'hash'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setMemoType(type);
+                      if (type === 'none') setMemoValue('');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '4px 0',
+                      fontSize: '11px',
+                      fontWeight: memoType === type ? 700 : 500,
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: memoType === type ? 'var(--bg-surface)' : 'transparent',
+                      color: memoType === type ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {type.toUpperCase()}
+                  </button>
+                ))}
               </div>
 
               {memoType !== 'none' && (
                 <input
                   type="text"
-                  className="input"
+                  className="input font-mono"
                   style={{ fontSize: '12px' }}
                   placeholder={
-                    memoType === 'text'
-                      ? 'Text Memo (max 28 bytes)'
-                      : memoType === 'id'
-                      ? '64-bit integer ID (e.g. 12345678)'
-                      : '32-byte hex hash'
+                    memoType === 'id'
+                      ? 'e.g. 100234857 (numeric)'
+                      : memoType === 'hash'
+                      ? '32-byte hex hash'
+                      : 'Memo text (max 28 chars)'
                   }
                   value={memoValue}
                   onChange={(e) => setMemoValue(e.target.value)}
-                  autoFocus
                 />
               )}
             </div>
+          )}
+        </div>
 
-            {/* Review Summary Breakdown */}
-            <div className="panel" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                <span className="text-muted">Recipient</span>
-                <span className="font-mono">{formatAddress(recipient, 6)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                <span className="text-muted">Amount</span>
-                <strong>{amount} {assetCode}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                <span className="text-muted">Network Fee</span>
-                <span>0.00001 XLM</span>
-              </div>
-              <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '2px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600 }}>
-                <span>Total Debit</span>
-                <span>
-                  {amount} {assetCode} {assetCode === 'XLM' ? '+ 0.00001 fee' : ''}
-                </span>
-              </div>
-            </div>
-
-            {error && <div className="input-error-msg">{error}</div>}
-
-            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => setStep(2)}
-                disabled={isSubmitting}
-                style={{ flex: 1 }}
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                className={`btn ${scanResult?.verdict === 'blocked' ? 'btn-danger' : 'btn-primary'}`}
-                onClick={handleConfirmSend}
-                disabled={
-                  isSubmitting ||
-                  isScanning ||
-                  ((scanResult?.verdict === 'blocked' ||
-                    scanResult?.verdict === 'warning' ||
-                    scanResult?.verdict === 'unavailable') &&
-                    !threatOverridden)
-                }
-                style={{ flex: 2, gap: '6px' }}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>Submitting…</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={14} />
-                    <span>Send {amount} {assetCode}</span>
-                  </>
-                )}
-              </button>
-            </div>
+        {/* 5. INLINE NETWORK FEE & THREAT SUMMARY */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            padding: '4px 2px',
+          }}
+        >
+          <span>Network Fee:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>0.00001 XLM</span>
+            <span
+              style={{
+                fontSize: '9px',
+                fontWeight: 700,
+                color: 'var(--success)',
+                padding: '1px 4px',
+                borderRadius: '3px',
+                background: 'var(--success-subtle)',
+              }}
+            >
+              SPONSORED
+            </span>
           </div>
-        )}
+        </div>
 
-        {/* RESULT SCREEN */}
-        {step === 'result' && (
+        {isScanning && (
           <div
             style={{
+              padding: '6px 10px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-subtle)',
               display: 'flex',
-              flexDirection: 'column',
-              flex: 1,
-              justifyContent: 'space-between',
-              textAlign: 'center',
-              paddingTop: '20px',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
             }}
           >
-            <div>
-              <div
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'var(--success-subtle)',
-                  color: 'var(--success)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <CheckCircle2 size={32} />
-              </div>
-
-              <h2 className="text-lg" style={{ marginBottom: '8px' }}>
-                Payment Submitted!
-              </h2>
-              <p className="text-muted text-xs" style={{ marginBottom: '20px', lineHeight: 1.4 }}>
-                Sent <strong>{amount} {assetCode}</strong> to{' '}
-                <span className="font-mono">{formatAddress(recipient, 6)}</span>.
-              </p>
-
-              {txHash && (
-                <a
-                  href={getExplorerUrl('tx', txHash, preferences.network)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <span>{t.viewOnExplorer}</span>
-                  <ExternalLink size={12} />
-                </a>
-              )}
-            </div>
-
-            <button className="btn btn-primary btn-lg" onClick={onSuccess}>
-              <span>{t.done}</span>
-            </button>
+            <Loader2 size={12} className="animate-spin" />
+            <span>Scanning destination address for threats...</span>
           </div>
         )}
+
+        {scanResult && !isScanning && (
+          <div
+            style={{
+              padding: '6px 10px',
+              borderRadius: 'var(--radius-sm)',
+              background:
+                scanResult.verdict === 'blocked' || scanResult.verdict === 'warning'
+                  ? 'var(--danger-subtle)'
+                  : 'var(--bg-subtle)',
+              border: `1px solid ${
+                scanResult.verdict === 'blocked' || scanResult.verdict === 'warning'
+                  ? 'var(--danger)'
+                  : 'var(--border-subtle)'
+              }`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+            }}
+          >
+            {scanResult.verdict === 'blocked' || scanResult.verdict === 'warning' ? (
+              <ShieldAlert size={13} color="var(--danger)" />
+            ) : (
+              <ShieldCheck size={13} color="var(--success)" />
+            )}
+            <span>
+              {scanResult.verdict === 'blocked' || scanResult.verdict === 'warning'
+                ? scanResult.summary || 'Flagged Address: Risk of phishing or malicious activity'
+                : 'Stellar Threat Scan: Clean address'}
+            </span>
+          </div>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--danger-subtle)',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger)',
+              fontSize: '12px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* PRIMARY SEND ACTION BUTTON */}
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          onClick={handleSendPayment}
+          disabled={isSubmitting || !recipient || !amount || parseFloat(amount) <= 0}
+          style={{ width: '100%', marginTop: 'auto', gap: '8px' }}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              <span>Confirming on Stellar…</span>
+            </>
+          ) : (
+            <>
+              <Send size={16} />
+              <span>
+                Send {amount || '0'} {assetCode}
+              </span>
+            </>
+          )}
+        </button>
       </div>
 
-      <LedgerSigningModal
-        isOpen={isSubmitting && activeAccount?.type === 'ledger'}
-        destination={recipient}
-        amount={amount}
-        assetCode={assetCode}
-        memo={memoValue}
-        network={preferences.network}
-        onCancel={() => setIsSubmitting(false)}
-      />
+      {/* TOKEN PICKER MODAL */}
+      {isTokenPickerOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+          }}
+          onClick={() => setIsTokenPickerOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-surface)',
+              borderTop: '1px solid var(--border-subtle)',
+              borderTopLeftRadius: 'var(--radius-lg)',
+              borderTopRightRadius: 'var(--radius-lg)',
+              maxHeight: '80%',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '16px',
+              gap: '12px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700 }}>Choose Asset</span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon"
+                onClick={() => setIsTokenPickerOpen(false)}
+                style={{ padding: '4px' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Search filter */}
+            <div style={{ position: 'relative' }}>
+              <Search
+                size={14}
+                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}
+              />
+              <input
+                type="text"
+                className="input"
+                style={{ paddingLeft: '32px', fontSize: '12px' }}
+                placeholder="Search by name or code…"
+                value={tokenSearchQuery}
+                onChange={(e) => setTokenSearchQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            {/* Token List */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {availableTokens
+                .filter((t) => t.code.toLowerCase().includes(tokenSearchQuery.toLowerCase()))
+                .map((token) => {
+                  const isSelected = token.code === assetCode;
+                  const priceInfo = getAssetPriceInfo(token.code);
+                  const priceFiat = priceInfo.priceInUsd * currencyInfo.rateFromUsd;
+                  const valFiat = parseFloat(token.balance) * priceFiat;
+
+                  return (
+                    <button
+                      key={token.code + (token.issuer || '')}
+                      type="button"
+                      onClick={() => {
+                        setAssetCode(token.code);
+                        setAmount('');
+                        setError('');
+                        setIsTokenPickerOpen(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        background: isSelected ? 'var(--bg-subtle)' : 'transparent',
+                        border: isSelected ? '1px solid var(--border-focus)' : '1px solid transparent',
+                        cursor: 'pointer',
+                        color: 'var(--text-primary)',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-app)',
+                            border: '1px solid var(--border-subtle)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '11px',
+                          }}
+                        >
+                          {token.code.slice(0, 3)}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{token.code}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {currencyInfo.symbol}{priceFiat.toFixed(priceFiat < 0.1 ? 4 : 2)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600 }}>
+                          {parseFloat(token.balance).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          ≈ {currencyInfo.symbol}{valFiat.toFixed(2)}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
