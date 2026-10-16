@@ -14,12 +14,12 @@ import {
 } from '../../services/history';
 import { fetchLiveMarketPrices } from '../../services/market';
 import { PriceChart } from '../common/PriceChart';
-import { SendScreen } from '../send/SendScreen';
-import { ReceiveScreen } from '../receive/ReceiveScreen';
-import { SwapScreen } from '../swap/SwapScreen';
-import { ManageAssetsScreen } from '../assets/ManageAssetsScreen';
-import { SettingsScreen } from '../settings/SettingsScreen';
-import { HistoryScreen } from '../history/HistoryScreen';
+import { DesktopAssets } from './DesktopAssets';
+import { DesktopSwap } from './DesktopSwap';
+import { DesktopSend } from './DesktopSend';
+import { DesktopReceive } from './DesktopReceive';
+import { DesktopActivity } from './DesktopActivity';
+import { DesktopSettings } from './DesktopSettings';
 import { DAppSandbox } from '../dapp/DAppSandbox';
 import { NftGalleryScreen } from '../nft/NftGalleryScreen';
 import { MarketTerminalScreen } from '../market/MarketTerminalScreen';
@@ -960,50 +960,37 @@ export const DesktopShell: React.FC = () => {
               VIEW 2: ASSETS & TRUSTLINES MANAGEMENT
               ========================================================================= */}
           {activeTab === 'assets' && (
-            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 28px', height: '100%' }}>
-              <ManageAssetsScreen onBack={() => setActiveTab('portfolio')} />
-            </div>
+            <DesktopAssets
+              onSendAsset={handleOpenSend}
+              onSwapAsset={handleOpenSwap}
+            />
           )}
 
           {/* =========================================================================
               VIEW 3: DEX SWAP
               ========================================================================= */}
           {activeTab === 'swap' && (
-            <div style={{ maxWidth: '540px', margin: '24px auto', padding: '0 20px', height: '100%' }}>
-              <SwapScreen
-                initialFromAssetCode={transferAssetCode}
-                onBack={() => setActiveTab('portfolio')}
-                onSuccess={() => {
-                  setActiveTab('portfolio');
-                  refreshData();
-                }}
-              />
-            </div>
+            <DesktopSwap
+              initialFromAssetCode={transferAssetCode}
+              onSuccess={() => refreshData()}
+            />
           )}
 
           {/* =========================================================================
               VIEW 4: SEND PAYMENT
               ========================================================================= */}
           {activeTab === 'send' && (
-            <div style={{ maxWidth: '540px', margin: '24px auto', padding: '0 20px', height: '100%' }}>
-              <SendScreen
-                initialAssetCode={transferAssetCode}
-                onBack={() => setActiveTab('portfolio')}
-                onSuccess={() => {
-                  setActiveTab('portfolio');
-                  refreshData();
-                }}
-              />
-            </div>
+            <DesktopSend
+              initialAssetCode={transferAssetCode}
+              onSuccess={() => refreshData()}
+            />
           )}
 
           {/* =========================================================================
               VIEW 5: RECEIVE FUNDS
               ========================================================================= */}
           {activeTab === 'receive' && (
-            <div style={{ maxWidth: '480px', margin: '28px auto', padding: '0 20px', height: '100%' }}>
-              <ReceiveScreen onBack={() => setActiveTab('portfolio')} />
-            </div>
+            <DesktopReceive />
           )}
 
           {/* =========================================================================
@@ -1031,9 +1018,7 @@ export const DesktopShell: React.FC = () => {
               VIEW 9: ACTIVITY LEDGER
               ========================================================================= */}
           {activeTab === 'activity' && (
-            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 28px', height: '100%' }}>
-              <HistoryScreen onBack={() => setActiveTab('portfolio')} />
-            </div>
+            <DesktopActivity />
           )}
 
           {/* =========================================================================
@@ -1059,9 +1044,7 @@ export const DesktopShell: React.FC = () => {
               VIEW 11: SETTINGS & VAULT SECURITY
               ========================================================================= */}
           {activeTab === 'settings' && (
-            <div style={{ maxWidth: '840px', margin: '0 auto', padding: '24px 28px', height: '100%' }}>
-              <SettingsScreen onBack={() => setActiveTab('portfolio')} />
-            </div>
+            <DesktopSettings />
           )}
         </main>
       </div>

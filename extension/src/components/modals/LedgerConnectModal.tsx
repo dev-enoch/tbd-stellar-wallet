@@ -83,35 +83,47 @@ export const LedgerConnectModal: React.FC<LedgerConnectModalProps> = ({ isOpen, 
     onClose();
   };
 
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 600;
+
   return (
     <div
       style={{
-        position: 'absolute',
+        position: isDesktop ? 'fixed' : 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 60,
+        background: isDesktop ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: isDesktop ? 'blur(8px)' : 'blur(4px)',
+        zIndex: isDesktop ? 1010 : 60,
         display: 'flex',
+        alignItems: isDesktop ? 'center' : 'stretch',
+        justifyContent: isDesktop ? 'center' : 'flex-end',
         flexDirection: 'column',
-        justifyContent: 'flex-end',
+        padding: isDesktop ? '20px' : 0,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleFinish();
       }}
     >
       <div
         style={{
           background: 'var(--bg-primary)',
-          borderTop: '1px solid var(--border-subtle)',
-          borderTopLeftRadius: 'var(--radius-lg)',
-          borderTopRightRadius: 'var(--radius-lg)',
-          padding: '20px 16px',
-          maxHeight: '90%',
+          borderRadius: isDesktop ? '16px' : undefined,
+          border: isDesktop ? '1px solid var(--border-subtle)' : undefined,
+          borderTop: !isDesktop ? '1px solid var(--border-subtle)' : undefined,
+          borderTopLeftRadius: !isDesktop ? 'var(--radius-lg)' : undefined,
+          borderTopRightRadius: !isDesktop ? 'var(--radius-lg)' : undefined,
+          padding: isDesktop ? '22px 24px' : '20px 16px',
+          width: '100%',
+          maxWidth: isDesktop ? '500px' : '100%',
+          maxHeight: isDesktop ? '85vh' : '90%',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--shadow-md)',
-          animation: 'fadeIn 0.15s ease-out',
+          boxShadow: isDesktop ? '0 24px 64px rgba(0, 0, 0, 0.7)' : 'var(--shadow-md)',
+          animation: 'fadeIn 0.18s ease-out',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div

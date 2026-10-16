@@ -125,26 +125,44 @@ export async function connectLedger(): Promise<LedgerDeviceInfo> {
   // Check physical WebHID if available
   if (isWebHIDSupported()) {
     try {
-      const devices = await (navigator as any).hid.getDevices();
-      const ledgerDevice = devices.find(
+      let devices = await (navigator as any).hid.getDevices();
+      let ledgerDevice = devices.find(
         (d: any) => d.vendorId === 0x2c97 // Ledger vendor ID
       );
 
+      // If no previously paired device, prompt user with native browser hardware picker
+      if (!ledgerDevice && typeof (navigator as any).hid.requestDevice === 'function') {
+        const requested = await (navigator as any).hid.requestDevice({
+          filters: [{ vendorId: 0x2c97 }],
+        });
+        if (requested && requested.length > 0) {
+          ledgerDevice = requested[0];
+        }
+      }
+
       if (ledgerDevice) {
+        if (!ledgerDevice.opened) {
+          await ledgerDevice.open();
+        }
+        isSimulatedConnected = true;
         return {
           vendorId: ledgerDevice.vendorId,
           productId: ledgerDevice.productId,
-          productName: ledgerDevice.productName || 'Ledger Nano',
+          productName: ledgerDevice.productName || 'Ledger Nano S/X/Plus',
           appVersion: '2.4.0',
           status: 'connected',
         };
       }
-    } catch {
-      // Fallback to simulated / user request
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError' || err?.message?.toLowerCase().includes('cancel')) {
+        throw new LedgerError('user_rejected', 'Device selection was cancelled.');
+      }
+      if (err instanceof LedgerError) throw err;
+      throw new LedgerError('transport_error', err?.message || 'Failed to communicate with Ledger device.');
     }
   }
 
-  // Simulated or direct bridge
+  // Simulated or direct bridge for test or unsupported environments
   isSimulatedConnected = true;
   return {
     vendorId: 0x2c97,

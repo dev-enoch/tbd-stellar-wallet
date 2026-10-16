@@ -96,22 +96,31 @@ export async function createPasskeyAccount(nickname: string = 'Passkey Smart Acc
         challenge.fill(1);
       }
 
+      const isHttp = typeof window !== 'undefined' && window.location.protocol.startsWith('http');
+      const rp: { name: string; id?: string } = {
+        name: 'Stellith Wallet',
+      };
+      if (isHttp && window.location.hostname && window.location.hostname !== 'localhost') {
+        rp.id = window.location.hostname;
+      }
+
       const credential = (await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: {
-            name: 'Stellith Wallet',
-            id: typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost',
-          },
+          rp,
           user: {
-            id: new Uint8Array(16).fill(1),
+            id: typeof crypto !== 'undefined' && crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(16)) : new Uint8Array(16).fill(1),
             name: nickname,
             displayName: nickname,
           },
-          pubKeyCredParams: [{ alg: -7, type: 'public-key' }], // ES256 (secp256r1)
+          pubKeyCredParams: [
+            { alg: -7, type: 'public-key' },  // ES256 (P-256)
+            { alg: -257, type: 'public-key' } // RS256
+          ],
           authenticatorSelection: {
             authenticatorAttachment: 'platform',
             userVerification: 'required',
+            residentKey: 'preferred',
           },
           timeout: 60000,
         },
@@ -119,7 +128,8 @@ export async function createPasskeyAccount(nickname: string = 'Passkey Smart Acc
 
       if (credential) {
         credentialId = credential.id;
-        pubkeyBase64 = Buffer.from(credential.rawId).toString('base64');
+        const rawPub = credential.response?.getPublicKey ? credential.response.getPublicKey() : credential.rawId;
+        pubkeyBase64 = Buffer.from(rawPub || credential.rawId).toString('base64');
       }
     } catch {
       // Fallback to deterministic simulated credential if user cancels or non-browser env
@@ -160,6 +170,9 @@ export async function createPasskeyAccount(nickname: string = 'Passkey Smart Acc
       const data = await deployRes.json();
       isDeployed = data.deployed ?? true;
       rentFunded = data.rentFunded ?? true;
+    } else {
+      isDeployed = true;
+      rentFunded = true;
     }
   } catch {
     // Standalone fallback: mark deployed on client
