@@ -16,6 +16,7 @@ import { SettingsScreen } from './settings/SettingsScreen';
 import { AccountSelectorModal } from './account/AccountSelectorModal';
 import { DashboardView } from './dashboard/DashboardView';
 import { RampScreen } from './ramp/RampScreen';
+import { NftGalleryScreen } from './nft/NftGalleryScreen';
 import { DesktopShell } from './desktop/DesktopShell';
 import { DesktopOnboarding } from './desktop/DesktopOnboarding';
 import { DesktopUnlock } from './desktop/DesktopUnlock';
@@ -34,7 +35,8 @@ export type WalletView =
   | 'assetDetail'
   | 'settings'
   | 'dashboard'
-  | 'ramp';
+  | 'ramp'
+  | 'nfts';
 
 export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
   const {
@@ -153,6 +155,8 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
           <SettingsScreen onBack={() => setActiveView('home')} />
         ) : activeView === 'dashboard' ? (
           <DashboardView onBack={() => setActiveView('home')} isFullTab={false} />
+        ) : activeView === 'nfts' ? (
+          <NftGalleryScreen onBack={handleReturnHome} />
         ) : activeView === 'ramp' ? (
           <RampScreen
             onBack={() => setActiveView('home')}
@@ -175,6 +179,7 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
             onOpenActivity={() => setActiveView('history')}
             onOpenSettings={() => setActiveView('settings')}
             onOpenDashboard={() => setActiveView('dashboard')}
+            onOpenNfts={() => setActiveView('nfts')}
           />
         )}
       </div>

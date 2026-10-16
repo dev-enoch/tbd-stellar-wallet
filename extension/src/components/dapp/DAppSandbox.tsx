@@ -15,7 +15,7 @@ import {
   Account,
 } from '@stellar/stellar-sdk';
 import { NETWORKS } from '../../services/stellar';
-import { Code, CheckCircle, ShieldAlert, Play } from 'lucide-react';
+import { Code, CheckCircle, ShieldAlert, Play, X } from 'lucide-react';
 
 export const DAppSandbox: React.FC = () => {
   const { activeAccount, preferences, updatePreferences } = useWallet();
@@ -184,28 +184,97 @@ export const DAppSandbox: React.FC = () => {
         </pre>
       </div>
 
-      {/* Render modals inside harness if active */}
-      {activeModal === 'connect' && (
-        <ConnectRequestModal
-          origin={currentOrigin}
-          onApprove={handleApproveConnect}
-          onReject={() => {
-            setActiveModal('none');
-            setOutputLog('Connect request was rejected by user.');
+      {/* Authentic Extension Popup Simulator (Connections & Confirmations) */}
+      {activeModal !== 'none' && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '28px',
+            width: '360px',
+            height: '600px',
+            background: 'var(--bg-primary)',
+            borderRadius: '16px',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+            zIndex: 9999,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
           }}
-        />
-      )}
+        >
+          {/* Extension Window Chrome Titlebar */}
+          <div
+            style={{
+              padding: '10px 14px',
+              background: 'var(--bg-surface)',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              userSelect: 'none',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '4px',
+                  background: 'var(--accent)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 900,
+                }}
+              >
+                S
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 600 }}>Stellith Extension • Approval</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon"
+              onClick={() => {
+                const msg = activeModal === 'connect' ? 'Connect request canceled.' : 'Transaction request rejected.';
+                setActiveModal('none');
+                setOutputLog(msg);
+              }}
+              style={{ padding: '2px' }}
+            >
+              <X size={14} />
+            </button>
+          </div>
 
-      {activeModal === 'sign' && currentPreview && (
-        <SignRequestModal
-          origin={currentOrigin}
-          preview={currentPreview}
-          onApprove={handleApproveSign}
-          onReject={() => {
-            setActiveModal('none');
-            setOutputLog('Transaction signing request was rejected by user.');
-          }}
-        />
+          {/* Popup Content */}
+          <div style={{ flex: 1, position: 'relative', overflowY: 'auto' }}>
+            {activeModal === 'connect' && (
+              <ConnectRequestModal
+                origin={currentOrigin}
+                onApprove={handleApproveConnect}
+                onReject={() => {
+                  setActiveModal('none');
+                  setOutputLog('Connect request was rejected by user.');
+                }}
+              />
+            )}
+
+            {activeModal === 'sign' && currentPreview && (
+              <SignRequestModal
+                origin={currentOrigin}
+                preview={currentPreview}
+                onApprove={handleApproveSign}
+                onReject={() => {
+                  setActiveModal('none');
+                  setOutputLog('Transaction signing request was rejected by user.');
+                }}
+              />
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -44,6 +44,7 @@ interface HomeScreenProps {
   onOpenActivity: () => void;
   onOpenSettings: () => void;
   onOpenDashboard: () => void;
+  onOpenNfts?: () => void;
   onOpenRamp?: () => void;
 }
 
@@ -57,6 +58,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenActivity,
   onOpenSettings,
   onOpenDashboard,
+  onOpenNfts,
   onOpenRamp: _onOpenRamp,
 }) => {
   const { activeAccount, preferences, updatePreferences, lock } = useWallet();
@@ -618,7 +620,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         style={{
           flexShrink: 0,
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           borderTop: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
           padding: '4px 0',
@@ -633,19 +635,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </button>
         <button
           className="btn btn-ghost"
+          onClick={onAddAsset}
+          style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--text-secondary)', padding: '4px 0' }}
+        >
+          <PlusCircle size={15} />
+          <span>Assets</span>
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onOpenNfts}
+          style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--text-secondary)', padding: '4px 0' }}
+        >
+          <Sparkles size={15} />
+          <span>NFTs</span>
+        </button>
+        <button
+          className="btn btn-ghost"
           onClick={onOpenActivity}
           style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--text-secondary)', padding: '4px 0' }}
         >
           <Clock size={15} />
           <span>Activity</span>
-        </button>
-        <button
-          className="btn btn-ghost"
-          onClick={onOpenSettings}
-          style={{ flexDirection: 'column', gap: '2px', fontSize: '10px', color: 'var(--text-secondary)', padding: '4px 0' }}
-        >
-          <SettingsIcon size={15} />
-          <span>Settings</span>
         </button>
       </div>
     </div>
