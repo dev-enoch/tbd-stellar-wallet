@@ -893,12 +893,31 @@ export const DesktopShell: React.FC = () => {
           <div
             style={{
               width: '100%',
-              maxWidth: activeModal === 'dapp' ? '760px' : '440px',
-              height: '620px',
+              maxWidth:
+                activeModal === 'dapp'
+                  ? '840px'
+                  : activeModal === 'history'
+                  ? '720px'
+                  : activeModal === 'settings'
+                  ? '640px'
+                  : activeModal === 'addAsset'
+                  ? '560px'
+                  : activeModal === 'send' || activeModal === 'swap'
+                  ? '520px'
+                  : '460px',
+              height:
+                activeModal === 'dapp'
+                  ? '740px'
+                  : activeModal === 'history'
+                  ? '680px'
+                  : activeModal === 'settings'
+                  ? '660px'
+                  : '640px',
+              maxHeight: '92vh',
               background: 'var(--bg-primary)',
-              borderRadius: 'var(--radius-lg)',
+              borderRadius: 'var(--radius-xl)',
               border: '1px solid var(--border-subtle)',
-              boxShadow: 'var(--shadow-lg)',
+              boxShadow: '0 24px 60px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -919,6 +938,7 @@ export const DesktopShell: React.FC = () => {
               <ReceiveScreen onBack={() => setActiveModal(null)} />
             ) : activeModal === 'swap' ? (
               <SwapScreen
+                initialFromAssetCode={modalAssetCode}
                 onBack={() => setActiveModal(null)}
                 onSuccess={() => {
                   setActiveModal(null);

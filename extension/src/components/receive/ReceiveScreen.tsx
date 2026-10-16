@@ -3,7 +3,7 @@ import { useWallet } from '../../contexts/WalletContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { getExplorerUrl } from '../../services/stellar';
 import QRCode from 'qrcode';
-import { ArrowLeft, Copy, Check, ExternalLink, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Copy, Check, ExternalLink, ShieldCheck, X } from 'lucide-react';
 
 interface ReceiveScreenProps {
   onBack: () => void;
@@ -22,7 +22,7 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({ onBack }) => {
     if (!address) return;
     QRCode.toDataURL(address, {
       margin: 1,
-      width: 180,
+      width: 200,
       color: {
         dark: '#000000',
         light: '#ffffff',
@@ -40,116 +40,204 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Header - Compact */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: 'var(--bg-primary)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Top Header */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
+          padding: '12px 16px',
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
           flexShrink: 0,
         }}
       >
-        <button className="btn btn-ghost btn-icon" onClick={onBack} style={{ padding: '4px' }}>
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          onClick={onBack}
+          style={{ padding: '6px' }}
+        >
           <ArrowLeft size={16} />
         </button>
-        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.receiveTitle}</span>
-        <div style={{ width: '28px' }} />
+
+        <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+          {t.receiveTitle}
+        </span>
+
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          onClick={onBack}
+          style={{ padding: '6px' }}
+        >
+          <X size={16} />
+        </button>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            <h2 className="text-base" style={{ marginBottom: '4px' }}>{activeAccount?.name || 'My Account'}</h2>
-            <span className="badge badge-accent" style={{ textTransform: 'capitalize', fontSize: '11px' }}>
-              {preferences.network}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '20px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Account Identifier */}
+          <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px 0' }}>
+              {activeAccount?.name || 'Main Account'}
+            </h2>
+            <span
+              className="badge badge-accent"
+              style={{ textTransform: 'capitalize', fontSize: '11px', padding: '3px 8px' }}
+            >
+              Stellar {preferences.network}
             </span>
           </div>
 
-        {/* QR Code Container */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '16px',
-            background: '#ffffff',
-            borderRadius: 'var(--radius-lg)',
-            width: '180px',
-            height: '180px',
-            margin: '0 auto 20px auto',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
-          {qrDataUrl ? (
-            <img src={qrDataUrl} alt="Stellar address QR" style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <div className="text-xs text-muted">Generating QR…</div>
-          )}
-        </div>
-
-        {/* Full Address Display with Copy Button */}
-        <div className="panel" style={{ marginBottom: '16px', padding: '12px' }}>
-          <div className="label" style={{ marginBottom: '6px' }}>{t.yourAddress}</div>
+          {/* QR Code Card */}
           <div
-            className="font-mono text-xs"
             style={{
-              wordBreak: 'break-all',
-              lineHeight: 1.5,
-              background: 'var(--bg-subtle)',
-              padding: '8px 10px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-muted)',
-              marginBottom: '10px',
-              userSelect: 'all',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '16px',
+              background: '#ffffff',
+              borderRadius: 'var(--radius-xl)',
+              width: '200px',
+              height: '200px',
+              boxShadow: 'var(--shadow-md)',
+              border: '1px solid var(--border-subtle)',
+              marginBottom: '20px',
             }}
           >
-            {address}
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt="Stellar public key QR"
+                style={{ width: '100%', height: '100%', display: 'block' }}
+              />
+            ) : (
+              <div style={{ fontSize: '12px', color: '#666' }}>Generating QR code…</div>
+            )}
           </div>
 
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleCopy}
-            style={{ width: '100%', gap: '6px' }}
+          {/* Full Address Display with Copy Button */}
+          <div
+            style={{
+              width: '100%',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '14px',
+              marginBottom: '16px',
+            }}
           >
-            {copied ? (
-              <>
-                <Check size={14} />
-                <span>{t.copied}</span>
-              </>
-            ) : (
-              <>
-                <Copy size={14} />
-                <span>{t.copy} Address</span>
-              </>
-            )}
-          </button>
+            <div
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                marginBottom: '8px',
+              }}
+            >
+              {t.yourAddress}
+            </div>
+
+            <div
+              className="font-mono"
+              style={{
+                fontSize: '12px',
+                wordBreak: 'break-all',
+                lineHeight: 1.6,
+                background: 'var(--bg-subtle)',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                marginBottom: '12px',
+                userSelect: 'all',
+              }}
+            >
+              {address}
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleCopy}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                gap: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {copied ? (
+                <>
+                  <Check size={16} />
+                  <span>Copied to Clipboard!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  <span>Copy Address</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Safety Disclaimer Banner */}
+          <div
+            className="banner banner-info"
+            style={{ width: '100%', gap: '8px', fontSize: '11px', lineHeight: 1.4 }}
+          >
+            <ShieldCheck
+              size={16}
+              style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent)' }}
+            />
+            <div>
+              Send only <strong>Stellar network assets</strong> (XLM, USDC, EURC, and registered trustlines) to this address. Incoming transfers are credited instantly.
+            </div>
+          </div>
         </div>
 
-        {/* Safety Disclaimer Banner */}
-        <div className="banner banner-info" style={{ gap: '8px' }}>
-          <ShieldCheck size={16} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent)' }} />
-          <div style={{ fontSize: '11px' }}>{t.receiveDisclaimer}</div>
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
+          <a
+            href={getExplorerUrl('account', address, preferences.network)}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: '11px',
+              color: 'var(--accent)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            <span>View Account on StellarExpert</span>
+            <ExternalLink size={12} />
+          </a>
         </div>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: '16px' }}>
-        <a
-          href={getExplorerUrl('account', address, preferences.network)}
-          target="_blank"
-          rel="noreferrer"
-          className="text-tertiary"
-          style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-        >
-          <span>{t.viewOnExplorer}</span>
-          <ExternalLink size={11} />
-        </a>
       </div>
     </div>
-  </div>
-);
+  );
 };

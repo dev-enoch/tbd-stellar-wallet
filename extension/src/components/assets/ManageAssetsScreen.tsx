@@ -21,6 +21,7 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  X,
 } from 'lucide-react';
 
 interface ManageAssetsScreenProps {
@@ -128,32 +129,48 @@ export const ManageAssetsScreen: React.FC<ManageAssetsScreenProps> = ({ onBack }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Header - Compact */}
+      {/* Header */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
+          padding: '12px 16px',
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--bg-surface)',
           flexShrink: 0,
         }}
       >
-        <button className="btn btn-ghost btn-icon" onClick={onBack} style={{ padding: '4px' }}>
-          <ArrowLeft size={16} />
-        </button>
-        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.manageAssetsTitle}</span>
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={() => {
-            setIsCustomMode(!isCustomMode);
-            setError('');
-          }}
-          style={{ fontSize: '11px', color: 'var(--accent)', padding: '2px 6px' }}
-        >
-          {isCustomMode ? 'Curated List' : '+ Custom'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button className="btn btn-ghost btn-icon" onClick={onBack} style={{ padding: '6px' }}>
+            <ArrowLeft size={16} />
+          </button>
+          <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+            {t.manageAssetsTitle}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setIsCustomMode(!isCustomMode);
+              setError('');
+            }}
+            style={{ fontSize: '11px', color: 'var(--accent)', padding: '4px 8px', fontWeight: 600 }}
+          >
+            {isCustomMode ? 'Curated List' : '+ Custom Asset'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            onClick={onBack}
+            style={{ padding: '6px' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '14px 16px 28px' }}>

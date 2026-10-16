@@ -23,6 +23,7 @@ import {
   EyeOff,
   ShieldAlert,
   FileCode,
+  X,
 } from 'lucide-react';
 
 interface SettingsScreenProps {
@@ -988,7 +989,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           {getSubpageTitle()}
         </span>
 
-        <div style={{ width: '64px' }} />
+        <div style={{ width: '64px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            onClick={onBack}
+            style={{ padding: '6px' }}
+            title="Close Settings"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable Content */}

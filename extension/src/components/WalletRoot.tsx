@@ -111,6 +111,7 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
           <ManageAssetsScreen onBack={() => setActiveView('home')} />
         ) : activeView === 'swap' ? (
           <SwapScreen
+            initialFromAssetCode={selectedAssetCode}
             onBack={() => setActiveView('home')}
             onSuccess={() => setActiveView('home')}
           />
@@ -124,7 +125,10 @@ export const WalletRoot: React.FC<WalletRootProps> = ({ isPopup = false }) => {
               setSelectedAssetCode(code);
               setActiveView('send');
             }}
-            onSwapAsset={(_code) => setActiveView('swap')}
+            onSwapAsset={(code) => {
+              setSelectedAssetCode(code);
+              setActiveView('swap');
+            }}
           />
         ) : activeView === 'settings' ? (
           <SettingsScreen onBack={() => setActiveView('home')} />
