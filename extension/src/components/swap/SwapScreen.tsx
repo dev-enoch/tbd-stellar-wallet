@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Clock,
   RefreshCw,
-  Loader2,
   Sparkles,
   Sliders,
   ShieldAlert,
@@ -22,6 +21,7 @@ import {
   X,
   Repeat,
 } from 'lucide-react';
+import { SlideToConfirm } from '../common/SlideToConfirm';
 import { scanTransaction, ScanResult } from '../../services/scanning';
 
 interface SwapScreenProps {
@@ -716,12 +716,23 @@ export const SwapScreen: React.FC<SwapScreenProps> = ({
             )}
           </div>
 
-          {/* Bottom Swap CTA Button */}
+          {/* Bottom Swap CTA Action - Slide to Confirm */}
           <div style={{ paddingTop: '16px' }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleExecuteSwap}
+            <SlideToConfirm
+              label={`Slide to Swap ${fromCode} for ${toCode}`}
+              loadingLabel="Executing DEX Swap…"
+              disabledLabel={
+                isInsufficientBalance
+                  ? `Insufficient ${fromCode} Balance`
+                  : !quote && isLoadingQuote
+                  ? 'Finding Best Route…'
+                  : !fromAmount || parseFloat(fromAmount) <= 0
+                  ? 'Enter an Amount to Swap'
+                  : !quote
+                  ? 'No Route Available'
+                  : `Slide to Swap ${fromCode} for ${toCode}`
+              }
+              onConfirm={handleExecuteSwap}
               disabled={
                 isSwapping ||
                 isLoadingQuote ||
@@ -730,33 +741,8 @@ export const SwapScreen: React.FC<SwapScreenProps> = ({
                 !fromAmount ||
                 parseFloat(fromAmount) <= 0
               }
-              style={{
-                width: '100%',
-                padding: '14px',
-                fontSize: '14px',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-            >
-              {isSwapping ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Executing DEX Swap…</span>
-                </>
-              ) : isInsufficientBalance ? (
-                <span>Insufficient {fromCode} Balance</span>
-              ) : !quote && isLoadingQuote ? (
-                <span>Finding Best Route…</span>
-              ) : (
-                <>
-                  <Repeat size={16} />
-                  <span>Swap {fromCode} for {toCode}</span>
-                </>
-              )}
-            </button>
+              isLoading={isSwapping}
+            />
           </div>
         </div>
       ) : (

@@ -14,6 +14,7 @@ import {
   Code2,
   X,
 } from 'lucide-react';
+import { SlideToConfirm } from '../common/SlideToConfirm';
 
 interface DesktopUnlockProps {
   onUnlock: (password: string) => Promise<boolean | void>;
@@ -269,23 +270,22 @@ export const DesktopUnlock: React.FC<DesktopUnlockProps> = ({ onUnlock, onReset 
               <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
                 You will need your 12-word recovery phrase or secret key to restore your funds. Ensure you have your backup before resetting.
               </p>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                <SlideToConfirm
+                  variant="danger"
+                  label="Slide to Wipe & Reset Wallet"
+                  loadingLabel="Resetting Local Wallet…"
+                  onConfirm={handleConfirmReset}
+                  isLoading={isSubmitting}
+                  height={44}
+                />
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm"
+                  className="btn btn-ghost btn-sm"
                   onClick={() => setShowResetConfirm(false)}
-                  style={{ flex: 1 }}
+                  style={{ width: '100%', color: 'var(--text-secondary)' }}
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  onClick={handleConfirmReset}
-                  disabled={isSubmitting}
-                  style={{ flex: 1 }}
-                >
-                  {isSubmitting ? 'Resetting…' : 'Yes, Reset Wallet'}
                 </button>
               </div>
             </div>

@@ -25,6 +25,7 @@ import {
   FileCode,
   X,
 } from 'lucide-react';
+import { SlideToConfirm } from '../common/SlideToConfirm';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -1044,30 +1045,25 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <SlideToConfirm
+                variant="danger"
+                label="Slide to Wipe & Reset"
+                loadingLabel="Wiping All Wallet Data…"
+                disabledLabel="Type RESET to Unlock Slider"
+                disabled={resetConfirmInput.trim().toUpperCase() !== 'RESET' || isResetting}
+                onConfirm={handleConfirmReset}
+                isLoading={isResetting}
+                height={48}
+              />
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-ghost btn-sm"
                 onClick={() => setIsResetModalOpen(false)}
                 disabled={isResetting}
-                style={{ flex: 1 }}
+                style={{ width: '100%', color: 'var(--text-secondary)' }}
               >
                 Cancel
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={handleConfirmReset}
-                disabled={resetConfirmInput.trim().toUpperCase() !== 'RESET' || isResetting}
-                style={{
-                  flex: 1,
-                  background: 'var(--danger)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                {isResetting ? 'Wiping…' : 'Wipe & Reset'}
               </button>
             </div>
           </div>

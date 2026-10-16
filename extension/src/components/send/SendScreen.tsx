@@ -25,7 +25,6 @@ import {
   CheckCircle2,
   ExternalLink,
   Clipboard,
-  Send,
   Loader2,
   ChevronDown,
   Search,
@@ -36,6 +35,7 @@ import {
   Check,
   Edit2,
 } from 'lucide-react';
+import { SlideToConfirm } from '../common/SlideToConfirm';
 
 interface SendScreenProps {
   onBack: () => void;
@@ -1093,36 +1093,14 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               )}
             </div>
 
-            {/* Bottom Confirm Action */}
+            {/* Bottom Confirm Action - Slide to Confirm */}
             <div style={{ paddingTop: '16px' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleExecutePayment}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Signing & Submitting…</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} />
-                    <span>Confirm & Send Payment</span>
-                  </>
-                )}
-              </button>
+              <SlideToConfirm
+                label={`Slide to Send ${amount} ${assetCode}`}
+                loadingLabel="Signing & Submitting Payment…"
+                onConfirm={handleExecutePayment}
+                isLoading={isSubmitting}
+              />
             </div>
           </div>
         )}

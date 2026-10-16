@@ -4,10 +4,10 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  ArrowRight,
   ShieldAlert,
   Code2,
 } from 'lucide-react';
+import { SlideToConfirm } from '../common/SlideToConfirm';
 
 interface SignRequestModalProps {
   preview: DecodedTransactionPreview;
@@ -165,20 +165,21 @@ export const SignRequestModal: React.FC<SignRequestModalProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons: If warning is shown, Reject is emphasized per PRD principles! */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '14px' }}>
+      {/* Action Area: Slide to Confirm protects against accidental signing */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+        <SlideToConfirm
+          label={preview.hasHighRisk ? 'Slide to Sign High-Risk Tx' : 'Slide to Approve Transaction'}
+          loadingLabel="Authorizing & Signing…"
+          variant={preview.hasHighRisk ? 'danger' : 'primary'}
+          onConfirm={onApprove}
+        />
         <button
-          className={`btn ${preview.hasHighRisk ? 'btn-danger' : 'btn-secondary'} btn-lg`}
+          type="button"
+          className="btn btn-ghost btn-sm"
           onClick={onReject}
+          style={{ width: '100%', color: 'var(--text-secondary)' }}
         >
-          Reject
-        </button>
-        <button
-          className={`btn ${preview.hasHighRisk ? 'btn-secondary' : 'btn-primary'} btn-lg`}
-          onClick={onApprove}
-        >
-          <span>Approve</span>
-          <ArrowRight size={14} />
+          Cancel & Reject Request
         </button>
       </div>
     </div>
